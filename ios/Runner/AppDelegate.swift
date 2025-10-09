@@ -3,7 +3,6 @@ import UIKit
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
-  GMSServices.provideAPIKey("") //Insert API Key Here
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
