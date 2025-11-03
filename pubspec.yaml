@@ -67,6 +67,7 @@ flutter:
 
   assets:
     - lib/assets/gradient/Gradients.png
+    - lib/assets/icons/HomeArrow.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
