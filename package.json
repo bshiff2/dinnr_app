@@ -1,9 +1,18 @@
 {
+  "type": "module",
+  "scripts": {
+    "backend:dev": "node backend/app/main.js",
+    "drizzle:generate": "drizzle-kit generate:pg",
+    "drizzle:push": "drizzle-kit push"
+  },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",
-    "drizzle-orm": "^0.44.6"
+    "cors": "^2.8.5",
+    "drizzle-orm": "^0.44.7",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
   },
   "devDependencies": {
-    "drizzle-kit": "^0.31.5"
+    "drizzle-kit": "^0.31.6"
   }
 }
