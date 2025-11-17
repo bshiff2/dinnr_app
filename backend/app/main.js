@@ -2,8 +2,12 @@ import express from 'express';
 import cors from 'cors';
 
 import { env } from './config/env.js';
-import { db, pingDatabase } from './db/client.js';
-import { users } from './db/schema.js';
+import { firestore } from './firebase/client.js';
+
+async function pingDatabase() {
+  // Simple Firestore read to confirm connectivity
+  await firestore.doc('_ping/ping').get();
+}
 
 const app = express();
 
@@ -32,10 +36,12 @@ app.get('/healthz/db', async (req, res, next) => {
   }
 });
 
+// Firestore-backed users endpoints (very small example)
 app.get('/users', async (_req, res, next) => {
   try {
-    const result = await db.select().from(users);
-    res.json({ data: result });
+    const snapshot = await firestore.collection('users').limit(100).get();
+    const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+    res.json({ data });
   } catch (error) {
     next(error);
   }
@@ -50,13 +56,19 @@ app.post('/users', async (req, res, next) => {
   }
 
   try {
-    const [created] = await db.insert(users).values({ email }).returning();
-    res.status(201).json({ data: created });
-  } catch (error) {
-    if (error?.code === '23505') {
+    // Attempt to create a user document keyed by email-safe id to emulate unique constraint
+    const id = email.replace(/[^a-z0-9-_\.]/gi, '_').toLowerCase();
+    const ref = firestore.collection('users').doc(id);
+    const existing = await ref.get();
+    if (existing.exists) {
       res.status(409).json({ error: 'email already exists' });
       return;
     }
+
+    await ref.set({ email, createdAt: new Date().toISOString() });
+    const created = (await ref.get()).data();
+    res.status(201).json({ data: { id: ref.id, ...created } });
+  } catch (error) {
     next(error);
   }
 });
