@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSSpeechRecognitionUsageDescription</key>
+    <string>Your app needs speech recognition for your speech input.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Your app needs microphone access for speech input.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>We need your location to show nearby restaurants.</string>
 	<key>CFBundleDevelopmentRegion</key>
