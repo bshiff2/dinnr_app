@@ -24,6 +24,8 @@ class FigmaToCodeApp extends StatelessWidget {
 }
 
 class Profile extends StatelessWidget {
+  const Profile({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -97,7 +99,7 @@ class Profile extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.start,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
+                      SizedBox(
                         width: double.infinity,
                         height: 722.70,
                         child: Stack(
@@ -105,7 +107,7 @@ class Profile extends StatelessWidget {
                             Positioned(
                               left: 20,
                               top: 29.99,
-                              child: Container(
+                              child: SizedBox(
                                 width: 353.65,
                                 height: 165.36,
                                 child: Stack(
@@ -113,7 +115,7 @@ class Profile extends StatelessWidget {
                                     Positioned(
                                       left: 120,
                                       top: 115.01,
-                                      child: Container(
+                                      child: SizedBox(
                                         width: 149.87,
                                         height: 52.36,
                                         child: Column(
@@ -122,7 +124,7 @@ class Profile extends StatelessWidget {
                                           crossAxisAlignment: CrossAxisAlignment.center,
                                           spacing: 4.99,
                                           children: [
-                                            Container(
+                                            SizedBox(
                                               width: 136.85,
                                               height: 28.76,
                                               child: Row(
@@ -143,7 +145,7 @@ class Profile extends StatelessWidget {
                                                 ],
                                               ),
                                             ),
-                                            Container(
+                                            SizedBox(
                                               width: 149.87,
                                               height: 18.61,
                                               child: Row(
@@ -225,7 +227,7 @@ class Profile extends StatelessWidget {
                             Positioned(
                               left: 20,
                               top: 220.35,
-                              child: Container(
+                              child: SizedBox(
                                 width: 353.65,
                                 height: 72.43,
                                 child: Stack(
@@ -251,7 +253,7 @@ class Profile extends StatelessWidget {
                                             Positioned(
                                               left: 41.91,
                                               top: 11.99,
-                                              child: Container(
+                                              child: SizedBox(
                                                 width: 27.50,
                                                 height: 28.76,
                                                 child: Row(
@@ -276,7 +278,7 @@ class Profile extends StatelessWidget {
                                             Positioned(
                                               left: 38.21,
                                               top: 45.74,
-                                              child: Container(
+                                              child: SizedBox(
                                                 width: 37.10,
                                                 height: 14.70,
                                                 child: Row(
@@ -337,7 +339,7 @@ class Profile extends StatelessWidget {
                                             Positioned(
                                               left: 43.74,
                                               top: 11.99,
-                                              child: Container(
+                                              child: SizedBox(
                                                 width: 27.46,
                                                 height: 28.76,
                                                 child: Row(
@@ -362,7 +364,7 @@ class Profile extends StatelessWidget {
                                             Positioned(
                                               left: 31.81,
                                               top: 45.74,
-                                              child: Container(
+                                              child: SizedBox(
                                                 width: 51.15,
                                                 height: 14.70,
                                                 child: Row(
@@ -423,7 +425,7 @@ class Profile extends StatelessWidget {
                                             Positioned(
                                               left: 48.33,
                                               top: 11.99,
-                                              child: Container(
+                                              child: SizedBox(
                                                 width: 14.57,
                                                 height: 28.76,
                                                 child: Row(
@@ -448,7 +450,7 @@ class Profile extends StatelessWidget {
                                             Positioned(
                                               left: 34.29,
                                               top: 45.74,
-                                              child: Container(
+                                              child: SizedBox(
                                                 width: 45.74,
                                                 height: 14.70,
                                                 child: Row(
@@ -495,7 +497,7 @@ class Profile extends StatelessWidget {
                             Positioned(
                               left: 20,
                               top: 317.77,
-                              child: Container(
+                              child: SizedBox(
                                 width: 353.65,
                                 height: 289.95,
                                 child: Stack(
@@ -521,7 +523,7 @@ class Profile extends StatelessWidget {
                                             Positioned(
                                               left: 20,
                                               top: 15,
-                                              child: Container(
+                                              child: SizedBox(
                                                 width: 139.31,
                                                 height: 20,
                                                 child: Row(
@@ -537,7 +539,7 @@ class Profile extends StatelessWidget {
                                                       decoration: BoxDecoration(),
                                                       child: Stack(),
                                                     ),
-                                                    Container(
+                                                    SizedBox(
                                                       width: 104.31,
                                                       height: 19.17,
                                                       child: Row(
@@ -611,7 +613,7 @@ class Profile extends StatelessWidget {
                                             Positioned(
                                               left: 20,
                                               top: 15,
-                                              child: Container(
+                                              child: SizedBox(
                                                 width: 132.30,
                                                 height: 20,
                                                 child: Row(
@@ -628,7 +630,7 @@ class Profile extends StatelessWidget {
                                                       child: Stack(),
                                                     ),
                                                     Expanded(
-                                                      child: Container(
+                                                      child: SizedBox(
                                                         height: 19.17,
                                                         child: Row(
                                                           mainAxisSize: MainAxisSize.min,
@@ -702,7 +704,7 @@ class Profile extends StatelessWidget {
                                             Positioned(
                                               left: 20,
                                               top: 15,
-                                              child: Container(
+                                              child: SizedBox(
                                                 width: 153.50,
                                                 height: 20,
                                                 child: Row(
@@ -718,7 +720,7 @@ class Profile extends StatelessWidget {
                                                       decoration: BoxDecoration(),
                                                       child: Stack(),
                                                     ),
-                                                    Container(
+                                                    SizedBox(
                                                       width: 118.50,
                                                       height: 19.17,
                                                       child: Row(
@@ -792,7 +794,7 @@ class Profile extends StatelessWidget {
                                             Positioned(
                                               left: 20,
                                               top: 15,
-                                              child: Container(
+                                              child: SizedBox(
                                                 width: 129.72,
                                                 height: 20,
                                                 child: Row(
@@ -809,7 +811,7 @@ class Profile extends StatelessWidget {
                                                       child: Stack(),
                                                     ),
                                                     Expanded(
-                                                      child: Container(
+                                                      child: SizedBox(
                                                         height: 19.17,
                                                         child: Row(
                                                           mainAxisSize: MainAxisSize.min,
@@ -883,7 +885,7 @@ class Profile extends StatelessWidget {
                                             Positioned(
                                               left: 20,
                                               top: 15,
-                                              child: Container(
+                                              child: SizedBox(
                                                 width: 95.36,
                                                 height: 20,
                                                 child: Row(
@@ -900,7 +902,7 @@ class Profile extends StatelessWidget {
                                                       child: Stack(),
                                                     ),
                                                     Expanded(
-                                                      child: Container(
+                                                      child: SizedBox(
                                                         height: 20.17,
                                                         child: Row(
                                                           mainAxisSize: MainAxisSize.min,
@@ -986,7 +988,7 @@ class Profile extends StatelessWidget {
                                       decoration: BoxDecoration(),
                                       child: Stack(),
                                     ),
-                                    Container(
+                                    SizedBox(
                                       width: 57.50,
                                       height: 20.17,
                                       child: Row(

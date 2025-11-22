@@ -24,6 +24,8 @@ class FigmaToCodeApp extends StatelessWidget {
 }
 
 class ChatNoOngoing extends StatelessWidget {
+  const ChatNoOngoing({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -43,7 +45,7 @@ class ChatNoOngoing extends StatelessWidget {
               Positioned(
                 left: 0,
                 top: 377,
-                child: Container(width: 393, height: 98),
+                child: SizedBox(width: 393, height: 98),
               ),
               Positioned(
                 left: 0,
@@ -135,7 +137,7 @@ class ChatNoOngoing extends StatelessWidget {
               Positioned(
                 left: 0,
                 top: 782,
-                child: Container(
+                child: SizedBox(
                   width: 393,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
