@@ -1,24 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'home_page.dart';
+import 'profile.dart';
 
+// Temporary main() for standalone testing - remove when integrating with main.dart
 void main() {
-  runApp(const FigmaToCodeApp());
+  runApp(const TestApp());
 }
 
-class FigmaToCodeApp extends StatelessWidget {
-  const FigmaToCodeApp({super.key});
-  
+class TestApp extends StatelessWidget {
+  const TestApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color.fromARGB(255, 18, 32, 47),
+        scaffoldBackgroundColor: const Color(0xFF121212),
       ),
-      home: Scaffold(
-        body: ListView(children: [
-          ChatOngoing(),
-        ]),
-      ),
+      initialRoute: '/chat',
+      routes: {
+        '/home': (context) => HomePageUI(),
+        '/chat': (context) => ChatOngoing(),
+        '/profile': (context) => Profile(),
+      },
     );
   }
 }
@@ -50,7 +55,6 @@ class _ChatOngoingState extends State<ChatOngoing> {
     _speechAvailable = await _speech.initialize(
       onStatus: (status) {
         if (status == 'done' && _isListening) {
-          // User stopped speaking, auto-send
           setState(() => _isListening = false);
           _sendMessage();
         }
@@ -118,148 +122,188 @@ class _ChatOngoingState extends State<ChatOngoing> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          width: 393,
-          height: 852,
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(color: const Color(0xFF121212)),
-          child: Stack(
-            children: [
-              Positioned(
-                left: 0,
-                top: 0,
-                right: 0,
-                bottom: 140,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                  child: _messages.isEmpty
-                      ? const SingleChildScrollView(
-                          child: SizedBox.shrink(),
-                        )
-                      : ListView.builder(
-                          controller: _scrollController,
-                          itemCount: _messages.length,
-                          itemBuilder: (context, index) {
-                            final msg = _messages[index];
-                            return Align(
-                              alignment: Alignment.topRight,
-                              child: Container(
-                                margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                                decoration: BoxDecoration(
-                                  color: Colors.green[400],
-                                  borderRadius: BorderRadius.only(
-                                    topLeft: Radius.circular(16),
-                                    topRight: Radius.circular(16),
-                                    bottomLeft: Radius.circular(16),
-                                    bottomRight: Radius.circular(4),
-                                  ),
+    return Material(
+      color: const Color(0xFF121212),
+      child: Container(
+        width: double.infinity,
+        height: MediaQuery.of(context).size.height,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(color: const Color(0xFF121212)),
+        child: Stack(
+          children: [
+            // Messages area
+            Positioned(
+              left: 0,
+              top: 0,
+              right: 0,
+              bottom: 140,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                child: _messages.isEmpty
+                    ? const SingleChildScrollView(
+                        child: SizedBox.shrink(),
+                      )
+                    : ListView.builder(
+                        controller: _scrollController,
+                        itemCount: _messages.length,
+                        itemBuilder: (context, index) {
+                          final msg = _messages[index];
+                          return Align(
+                            alignment: Alignment.topRight,
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: Colors.green[400],
+                                borderRadius: BorderRadius.only(
+                                  topLeft: Radius.circular(16),
+                                  topRight: Radius.circular(16),
+                                  bottomLeft: Radius.circular(16),
+                                  bottomRight: Radius.circular(4),
                                 ),
-                                child: Text(
-                                  msg,
+                              ),
+                              child: Text(
+                                msg,
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ),
+            // Bottom input and navigation
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Chat input box
+                    Container(
+                      width: double.infinity,
+                      height: 56,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 500),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: ShapeDecoration(
+                            color: const Color(0xFF1E1E1E),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(28),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: _controller,
+                                  onSubmitted: (_) => _sendMessage(),
+                                  decoration: const InputDecoration(
+                                    hintText: 'Type to chat',
+                                    hintStyle: TextStyle(color: Colors.white54),
+                                    border: InputBorder.none,
+                                  ),
                                   style: const TextStyle(color: Colors.white),
                                 ),
                               ),
-                            );
-                          },
-                        ),
-                ),
-              ),
-              Positioned(
-                left: 0,
-                top: 712,
-                child: Container(
-                  width: 393,
-                  padding: const EdgeInsets.symmetric(vertical: 3),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: double.infinity,
-                        height: 56,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 500),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            decoration: ShapeDecoration(
-                              color: const Color(0xFF1E1E1E),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(28),
+                              // Voice input button
+                              IconButton(
+                                onPressed: _isListening ? _stopListening : _startListening,
+                                icon: Icon(
+                                  _isListening ? Icons.mic : Icons.mic_none,
+                                  color: _isListening ? Colors.red : Colors.white70,
+                                ),
                               ),
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: TextField(
-                                    controller: _controller,
-                                    onSubmitted: (_) => _sendMessage(),
-                                    decoration: const InputDecoration(
-                                      hintText: 'Type to chat',
-                                      hintStyle: TextStyle(color: Colors.white54),
-                                      border: InputBorder.none,
-                                    ),
-                                    style: const TextStyle(color: Colors.white),
-                                  ),
-                                ),
-                                // Voice input button
-                                IconButton(
-                                  onPressed: _isListening ? _stopListening : _startListening,
-                                  icon: Icon(
-                                    _isListening ? Icons.mic : Icons.mic_none,
-                                    color: _isListening ? Colors.red : Colors.white70,
-                                  ),
-                                ),
-                                IconButton(
-                                  onPressed: _sendMessage,
-                                  icon: const Icon(Icons.send, color: Colors.white70),
-                                ),
-                              ],
-                            ),
+                              IconButton(
+                                onPressed: _sendMessage,
+                                icon: const Icon(Icons.send, color: Colors.white70),
+                              ),
+                            ],
                           ),
                         ),
                       ),
-                      const SizedBox(height: 10),
-                      Container(
-                        width: double.infinity,
-                        height: 67,
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            ConstrainedBox(
-                              constraints: const BoxConstraints(maxWidth: 500),
-                              child: Container(
-                                width: double.infinity,
-                                height: 67,
-                                decoration: ShapeDecoration(
-                                  color: const Color(0xCC222222),
-                                  shape: const RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.only(
-                                      topLeft: Radius.circular(20),
-                                      topRight: Radius.circular(20),
-                                    ),
+                    ),
+                    const SizedBox(height: 10),
+                    // Navigation bar
+                    Container(
+                      width: double.infinity,
+                      height: 67,
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 500),
+                            child: Container(
+                              width: double.infinity,
+                              height: 67,
+                              decoration: ShapeDecoration(
+                                color: const Color(0xCC222222),
+                                shape: const RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.only(
+                                    topLeft: Radius.circular(20),
+                                    topRight: Radius.circular(20),
                                   ),
                                 ),
                               ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  // Home button
+                                  IconButton(
+                                    onPressed: () {
+                                      Navigator.pushReplacementNamed(context, '/home');
+                                    },
+                                    icon: Icon(
+                                      Icons.home,
+                                      color: Colors.white38,
+                                      size: 28,
+                                    ),
+                                  ),
+                                  // Chat button (current page - highlighted)
+                                  IconButton(
+                                    onPressed: () {},
+                                    icon: Icon(
+                                      Icons.chat_bubble,
+                                      color: Colors.white,
+                                      size: 28,
+                                    ),
+                                  ),
+                                  // Profile button
+                                  IconButton(
+                                    onPressed: () {
+                                      Navigator.pushReplacementNamed(context, '/profile');
+                                    },
+                                    icon: Icon(
+                                      Icons.person,
+                                      color: Colors.white38,
+                                      size: 28,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

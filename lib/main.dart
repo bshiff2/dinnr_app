@@ -1,7 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-
+import 'home_page.dart';
+import 'chatPage.dart';
+import 'profile.dart';
 import 'login_page.dart';
 
 Future<void> main() async {
@@ -45,7 +47,6 @@ Future<void> main() async {
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -56,6 +57,11 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       home: const AuthGate(),
+      routes: {
+        '/home': (context) => HomePageUI(),
+        '/chat': (context) => ChatOngoing(),
+        '/profile': (context) => Profile(),
+      },
     );
   }
 }
