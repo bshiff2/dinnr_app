@@ -26,6 +26,8 @@ class FigmaToCodeApp extends StatelessWidget {
 }
 
 class Profile extends StatelessWidget {
+  const Profile({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Material(
@@ -172,6 +174,82 @@ class Profile extends StatelessWidget {
                                                     fontSize: 24,
                                                     fontFamily: 'SF Compact Rounded',
                                                     fontWeight: FontWeight.w700,
+              Positioned(
+                left: 0,
+                top: 20,
+                child: Container(
+                  width: 393.65,
+                  height: 742.48,
+                  clipBehavior: Clip.antiAlias,
+                  decoration: BoxDecoration(),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: double.infinity,
+                        height: 722.70,
+                        child: Stack(
+                          children: [
+                            Positioned(
+                              left: 20,
+                              top: 29.99,
+                              child: SizedBox(
+                                width: 353.65,
+                                height: 165.36,
+                                child: Stack(
+                                  children: [
+                                    Positioned(
+                                      left: 120,
+                                      top: 115.01,
+                                      child: SizedBox(
+                                        width: 149.87,
+                                        height: 52.36,
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          mainAxisAlignment: MainAxisAlignment.start,
+                                          crossAxisAlignment: CrossAxisAlignment.center,
+                                          spacing: 4.99,
+                                          children: [
+                                            SizedBox(
+                                              width: 136.85,
+                                              height: 28.76,
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                mainAxisAlignment: MainAxisAlignment.start,
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    'John Doe',
+                                                    textAlign: TextAlign.center,
+                                                    style: TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 24,
+                                                      fontFamily: 'SF Compact Rounded',
+                                                      fontWeight: FontWeight.w700,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            SizedBox(
+                                              width: 149.87,
+                                              height: 18.61,
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                mainAxisAlignment: MainAxisAlignment.start,
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    'john.doe@email.com',
+                                                    textAlign: TextAlign.center,
+                                                    style: TextStyle(
+                                                      color: const Color(0xFFA0A0A0),
+                                                      fontSize: 14,
+                                                      fontFamily: 'SF Compact Rounded',
+                                                      fontWeight: FontWeight.w400,
+                                                    ),
                                                   ),
                                                 ),
                                               ],
@@ -193,6 +271,100 @@ class Profile extends StatelessWidget {
                                                     fontSize: 14,
                                                     fontFamily: 'SF Compact Rounded',
                                                     fontWeight: FontWeight.w400,
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              left: 20,
+                              top: 220.35,
+                              child: SizedBox(
+                                width: 353.65,
+                                height: 72.43,
+                                child: Stack(
+                                  children: [
+                                    Positioned(
+                                      left: 0,
+                                      top: 0,
+                                      child: Container(
+                                        width: 111.22,
+                                        height: 72.43,
+                                        decoration: ShapeDecoration(
+                                          gradient: LinearGradient(
+                                            begin: Alignment(0.00, 0.50),
+                                            end: Alignment(1.00, 0.50),
+                                            colors: [const Color(0x7F4C0041), const Color(0x7F4C0041)],
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(15),
+                                          ),
+                                        ),
+                                        child: Stack(
+                                          children: [
+                                            Positioned(
+                                              left: 41.91,
+                                              top: 11.99,
+                                              child: SizedBox(
+                                                width: 27.50,
+                                                height: 28.76,
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  mainAxisAlignment: MainAxisAlignment.start,
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      '47',
+                                                      textAlign: TextAlign.center,
+                                                      style: TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 24,
+                                                        fontFamily: 'SF Compact Rounded',
+                                                        fontWeight: FontWeight.w700,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                            Positioned(
+                                              left: 38.21,
+                                              top: 45.74,
+                                              child: SizedBox(
+                                                width: 37.10,
+                                                height: 14.70,
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  mainAxisAlignment: MainAxisAlignment.start,
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      'Orders',
+                                                      textAlign: TextAlign.center,
+                                                      style: TextStyle(
+                                                        color: const Color(0xFFD4D4D4),
+                                                        fontSize: 12,
+                                                        fontFamily: 'SF Compact Rounded',
+                                                        fontWeight: FontWeight.w400,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                            Positioned(
+                                              left: 0,
+                                              top: 0,
+                                              child: Container(
+                                                width: 111.22,
+                                                height: 72.43,
+                                                decoration: ShapeDecoration(
+                                                  color: Colors.white.withValues(alpha: 0),
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius: BorderRadius.circular(15),
                                                   ),
                                                 ),
                                               ],
@@ -231,6 +403,142 @@ class Profile extends StatelessWidget {
                                               color: const Color(0xFF121212),
                                               shape: RoundedRectangleBorder(
                                                 borderRadius: BorderRadius.circular(21442500),
+                                        child: Stack(
+                                          children: [
+                                            Positioned(
+                                              left: 43.74,
+                                              top: 11.99,
+                                              child: SizedBox(
+                                                width: 27.46,
+                                                height: 28.76,
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  mainAxisAlignment: MainAxisAlignment.start,
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      '12',
+                                                      textAlign: TextAlign.center,
+                                                      style: TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 24,
+                                                        fontFamily: 'SF Compact Rounded',
+                                                        fontWeight: FontWeight.w700,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                            Positioned(
+                                              left: 31.81,
+                                              top: 45.74,
+                                              child: SizedBox(
+                                                width: 51.15,
+                                                height: 14.70,
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  mainAxisAlignment: MainAxisAlignment.start,
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      'Favorites',
+                                                      textAlign: TextAlign.center,
+                                                      style: TextStyle(
+                                                        color: const Color(0xFFD4D4D4),
+                                                        fontSize: 12,
+                                                        fontFamily: 'SF Compact Rounded',
+                                                        fontWeight: FontWeight.w400,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                            Positioned(
+                                              left: 0,
+                                              top: 0,
+                                              child: Container(
+                                                width: 111.22,
+                                                height: 72.43,
+                                                decoration: ShapeDecoration(
+                                                  color: Colors.white.withValues(alpha: 0),
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius: BorderRadius.circular(15),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    Positioned(
+                                      left: 242.43,
+                                      top: 0,
+                                      child: Container(
+                                        width: 111.22,
+                                        height: 72.43,
+                                        decoration: ShapeDecoration(
+                                          gradient: LinearGradient(
+                                            begin: Alignment(0.00, 0.50),
+                                            end: Alignment(1.00, 0.50),
+                                            colors: [const Color(0x7F4C0041), const Color(0x7F4C0041)],
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(15),
+                                          ),
+                                        ),
+                                        child: Stack(
+                                          children: [
+                                            Positioned(
+                                              left: 48.33,
+                                              top: 11.99,
+                                              child: SizedBox(
+                                                width: 14.57,
+                                                height: 28.76,
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  mainAxisAlignment: MainAxisAlignment.start,
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      '8',
+                                                      textAlign: TextAlign.center,
+                                                      style: TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 24,
+                                                        fontFamily: 'SF Compact Rounded',
+                                                        fontWeight: FontWeight.w700,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                            Positioned(
+                                              left: 34.29,
+                                              top: 45.74,
+                                              child: SizedBox(
+                                                width: 45.74,
+                                                height: 14.70,
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  mainAxisAlignment: MainAxisAlignment.start,
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      'Reviews',
+                                                      textAlign: TextAlign.center,
+                                                      style: TextStyle(
+                                                        color: const Color(0xFFD4D4D4),
+                                                        fontSize: 12,
+                                                        fontFamily: 'SF Compact Rounded',
+                                                        fontWeight: FontWeight.w400,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
                                               ),
                                             ),
                                             child: Row(
@@ -293,6 +601,175 @@ class Profile extends StatelessWidget {
                                                 fontSize: 24,
                                                 fontFamily: 'SF Compact Rounded',
                                                 fontWeight: FontWeight.w700,
+                            Positioned(
+                              left: 20,
+                              top: 317.77,
+                              child: SizedBox(
+                                width: 353.65,
+                                height: 289.95,
+                                child: Stack(
+                                  children: [
+                                    Positioned(
+                                      left: 0,
+                                      top: 0,
+                                      child: Container(
+                                        width: 353.65,
+                                        height: 49.99,
+                                        decoration: ShapeDecoration(
+                                          gradient: LinearGradient(
+                                            begin: Alignment(0.00, 0.50),
+                                            end: Alignment(1.00, 0.50),
+                                            colors: [const Color(0xFF4C0041), const Color(0xFF4C0041)],
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(20),
+                                          ),
+                                        ),
+                                        child: Stack(
+                                          children: [
+                                            Positioned(
+                                              left: 20,
+                                              top: 15,
+                                              child: SizedBox(
+                                                width: 139.31,
+                                                height: 20,
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  mainAxisAlignment: MainAxisAlignment.start,
+                                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                                  spacing: 15,
+                                                  children: [
+                                                    Container(
+                                                      width: 20,
+                                                      height: 20,
+                                                      clipBehavior: Clip.antiAlias,
+                                                      decoration: BoxDecoration(),
+                                                      child: Stack(),
+                                                    ),
+                                                    SizedBox(
+                                                      width: 104.31,
+                                                      height: 19.17,
+                                                      child: Row(
+                                                        mainAxisSize: MainAxisSize.min,
+                                                        mainAxisAlignment: MainAxisAlignment.start,
+                                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                                        children: [
+                                                          Text(
+                                                            'Favorite Places',
+                                                            style: TextStyle(
+                                                              color: Colors.white,
+                                                              fontSize: 16,
+                                                              fontFamily: 'SF Compact Rounded',
+                                                              fontWeight: FontWeight.w400,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                            Positioned(
+                                              left: 321.66,
+                                              top: 19,
+                                              child: Container(
+                                                width: 11.99,
+                                                height: 11.99,
+                                                clipBehavior: Clip.antiAlias,
+                                                decoration: BoxDecoration(),
+                                                child: Stack(),
+                                              ),
+                                            ),
+                                            Positioned(
+                                              left: 0,
+                                              top: 0,
+                                              child: Container(
+                                                width: 353.65,
+                                                height: 49.99,
+                                                decoration: ShapeDecoration(
+                                                  color: Colors.white.withValues(alpha: 0),
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius: BorderRadius.circular(20),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    Positioned(
+                                      left: 0,
+                                      top: 59.99,
+                                      child: Container(
+                                        width: 353.65,
+                                        height: 49.99,
+                                        decoration: ShapeDecoration(
+                                          gradient: LinearGradient(
+                                            begin: Alignment(0.00, 0.50),
+                                            end: Alignment(1.00, 0.50),
+                                            colors: [const Color(0xFF4C0041), const Color(0xFF4C0041)],
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(20),
+                                          ),
+                                        ),
+                                        child: Stack(
+                                          children: [
+                                            Positioned(
+                                              left: 20,
+                                              top: 15,
+                                              child: SizedBox(
+                                                width: 132.30,
+                                                height: 20,
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  mainAxisAlignment: MainAxisAlignment.start,
+                                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                                  spacing: 15,
+                                                  children: [
+                                                    Container(
+                                                      width: 20,
+                                                      height: 20,
+                                                      clipBehavior: Clip.antiAlias,
+                                                      decoration: BoxDecoration(),
+                                                      child: Stack(),
+                                                    ),
+                                                    Expanded(
+                                                      child: SizedBox(
+                                                        height: 19.17,
+                                                        child: Row(
+                                                          mainAxisSize: MainAxisSize.min,
+                                                          mainAxisAlignment: MainAxisAlignment.start,
+                                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                                          children: [
+                                                            Text(
+                                                              'Order History',
+                                                              style: TextStyle(
+                                                                color: Colors.white,
+                                                                fontSize: 16,
+                                                                fontFamily: 'SF Compact Rounded',
+                                                                fontWeight: FontWeight.w400,
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                            Positioned(
+                                              left: 321.66,
+                                              top: 19,
+                                              child: Container(
+                                                width: 11.99,
+                                                height: 11.99,
+                                                clipBehavior: Clip.antiAlias,
+                                                decoration: BoxDecoration(),
+                                                child: Stack(),
                                               ),
                                             ),
                                           ),
@@ -343,6 +820,151 @@ class Profile extends StatelessWidget {
                                                 fontSize: 24,
                                                 fontFamily: 'SF Compact Rounded',
                                                 fontWeight: FontWeight.w700,
+                                        child: Stack(
+                                          children: [
+                                            Positioned(
+                                              left: 20,
+                                              top: 15,
+                                              child: SizedBox(
+                                                width: 153.50,
+                                                height: 20,
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  mainAxisAlignment: MainAxisAlignment.start,
+                                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                                  spacing: 15,
+                                                  children: [
+                                                    Container(
+                                                      width: 20,
+                                                      height: 20,
+                                                      clipBehavior: Clip.antiAlias,
+                                                      decoration: BoxDecoration(),
+                                                      child: Stack(),
+                                                    ),
+                                                    SizedBox(
+                                                      width: 118.50,
+                                                      height: 19.17,
+                                                      child: Row(
+                                                        mainAxisSize: MainAxisSize.min,
+                                                        mainAxisAlignment: MainAxisAlignment.start,
+                                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                                        children: [
+                                                          Text(
+                                                            'Saved Addresses',
+                                                            style: TextStyle(
+                                                              color: Colors.white,
+                                                              fontSize: 16,
+                                                              fontFamily: 'SF Compact Rounded',
+                                                              fontWeight: FontWeight.w400,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                            Positioned(
+                                              left: 321.66,
+                                              top: 19,
+                                              child: Container(
+                                                width: 11.99,
+                                                height: 11.99,
+                                                clipBehavior: Clip.antiAlias,
+                                                decoration: BoxDecoration(),
+                                                child: Stack(),
+                                              ),
+                                            ),
+                                            Positioned(
+                                              left: 0,
+                                              top: 0,
+                                              child: Container(
+                                                width: 353.65,
+                                                height: 49.99,
+                                                decoration: ShapeDecoration(
+                                                  color: Colors.white.withValues(alpha: 0),
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius: BorderRadius.circular(20),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    Positioned(
+                                      left: 0,
+                                      top: 179.97,
+                                      child: Container(
+                                        width: 353.65,
+                                        height: 49.99,
+                                        decoration: ShapeDecoration(
+                                          gradient: LinearGradient(
+                                            begin: Alignment(0.00, 0.50),
+                                            end: Alignment(1.00, 0.50),
+                                            colors: [const Color(0xFF4C0041), const Color(0xFF4C0041)],
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(20),
+                                          ),
+                                        ),
+                                        child: Stack(
+                                          children: [
+                                            Positioned(
+                                              left: 20,
+                                              top: 15,
+                                              child: SizedBox(
+                                                width: 129.72,
+                                                height: 20,
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  mainAxisAlignment: MainAxisAlignment.start,
+                                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                                  spacing: 15,
+                                                  children: [
+                                                    Container(
+                                                      width: 20,
+                                                      height: 20,
+                                                      clipBehavior: Clip.antiAlias,
+                                                      decoration: BoxDecoration(),
+                                                      child: Stack(),
+                                                    ),
+                                                    Expanded(
+                                                      child: SizedBox(
+                                                        height: 19.17,
+                                                        child: Row(
+                                                          mainAxisSize: MainAxisSize.min,
+                                                          mainAxisAlignment: MainAxisAlignment.start,
+                                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                                          children: [
+                                                            Text(
+                                                              'Notifications',
+                                                              style: TextStyle(
+                                                                color: Colors.white,
+                                                                fontSize: 16,
+                                                                fontFamily: 'SF Compact Rounded',
+                                                                fontWeight: FontWeight.w400,
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                            Positioned(
+                                              left: 321.66,
+                                              top: 19,
+                                              child: Container(
+                                                width: 11.99,
+                                                height: 11.99,
+                                                clipBehavior: Clip.antiAlias,
+                                                decoration: BoxDecoration(),
+                                                child: Stack(),
                                               ),
                                             ),
                                           ),
@@ -393,6 +1015,61 @@ class Profile extends StatelessWidget {
                                                 fontSize: 24,
                                                 fontFamily: 'SF Compact Rounded',
                                                 fontWeight: FontWeight.w700,
+                                        child: Stack(
+                                          children: [
+                                            Positioned(
+                                              left: 20,
+                                              top: 15,
+                                              child: SizedBox(
+                                                width: 95.36,
+                                                height: 20,
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  mainAxisAlignment: MainAxisAlignment.start,
+                                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                                  spacing: 15,
+                                                  children: [
+                                                    Container(
+                                                      width: 20,
+                                                      height: 20,
+                                                      clipBehavior: Clip.antiAlias,
+                                                      decoration: BoxDecoration(),
+                                                      child: Stack(),
+                                                    ),
+                                                    Expanded(
+                                                      child: SizedBox(
+                                                        height: 20.17,
+                                                        child: Row(
+                                                          mainAxisSize: MainAxisSize.min,
+                                                          mainAxisAlignment: MainAxisAlignment.start,
+                                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                                          children: [
+                                                            Text(
+                                                              'Settings',
+                                                              style: TextStyle(
+                                                                color: Colors.white,
+                                                                fontSize: 16,
+                                                                fontFamily: 'SF Compact Rounded',
+                                                                fontWeight: FontWeight.w400,
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                            Positioned(
+                                              left: 321.66,
+                                              top: 19,
+                                              child: Container(
+                                                width: 11.99,
+                                                height: 11.99,
+                                                clipBehavior: Clip.antiAlias,
+                                                decoration: BoxDecoration(),
+                                                child: Stack(),
                                               ),
                                             ),
                                           ),
@@ -450,6 +1127,40 @@ class Profile extends StatelessWidget {
                                 ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(20),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  spacing: 9.99,
+                                  children: [
+                                    Container(
+                                      width: 20,
+                                      height: 20,
+                                      clipBehavior: Clip.antiAlias,
+                                      decoration: BoxDecoration(),
+                                      child: Stack(),
+                                    ),
+                                    SizedBox(
+                                      width: 57.50,
+                                      height: 20.17,
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        mainAxisAlignment: MainAxisAlignment.start,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Log Out',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 16,
+                                              fontFamily: 'SF Compact Rounded',
+                                              fontWeight: FontWeight.w400,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                               child: Row(

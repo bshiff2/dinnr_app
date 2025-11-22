@@ -31,6 +31,8 @@ class FigmaToCodeApp extends StatelessWidget {
 }
 
 class ChatOngoing extends StatefulWidget {
+  const ChatOngoing({super.key});
+
   @override
   State<ChatOngoing> createState() => _ChatOngoingState();
 }
