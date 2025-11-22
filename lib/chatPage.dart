@@ -14,11 +14,18 @@ class FigmaToCodeApp extends StatelessWidget {
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: const Color.fromARGB(255, 18, 32, 47),
       ),
-      home: Scaffold(
-        body: ListView(children: [
-          ChatOngoing(),
-        ]),
-      ),
+      initialRoute: '/chat',
+      routes: {
+        '/': (context) => Scaffold(
+          body: Center(child: Text('Main Page - Import your main.dart content here')),
+        ),
+        '/chat': (context) => Scaffold(
+          body: ChatOngoing(),
+        ),
+        '/profile': (context) => Scaffold(
+          body: Center(child: Text('Profile Page - Import your profile.dart content here')),
+        ),
+      },
     );
   }
 }
@@ -118,20 +125,20 @@ class _ChatOngoingState extends State<ChatOngoing> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          width: 393,
-          height: 852,
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(color: const Color(0xFF121212)),
-          child: Stack(
-            children: [
-              Positioned(
-                left: 0,
-                top: 0,
-                right: 0,
-                bottom: 140,
+    return Material(
+      color: const Color(0xFF121212),
+      child: Container(
+        width: double.infinity,
+        height: MediaQuery.of(context).size.height,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(color: const Color(0xFF121212)),
+        child: Stack(
+        children: [
+          Positioned(
+            left: 0,
+            top: 0,
+            right: 0,
+            bottom: 140,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                   child: _messages.isEmpty
@@ -247,6 +254,42 @@ class _ChatOngoingState extends State<ChatOngoing> {
                                     ),
                                   ),
                                 ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                  children: [
+                                    // Home button
+                                    IconButton(
+                                      onPressed: () {
+                                        Navigator.pushReplacementNamed(context, '/');
+                                      },
+                                      icon: Icon(
+                                        Icons.home,
+                                        color: Colors.white38,
+                                        size: 28,
+                                      ),
+                                    ),
+                                    // Chat button (current page)
+                                    IconButton(
+                                      onPressed: () {},
+                                      icon: Icon(
+                                        Icons.chat_bubble,
+                                        color: Colors.white,
+                                        size: 28,
+                                      ),
+                                    ),
+                                    // Profile button
+                                    IconButton(
+                                      onPressed: () {
+                                        Navigator.pushReplacementNamed(context, '/profile');
+                                      },
+                                      icon: Icon(
+                                        Icons.person,
+                                        color: Colors.white38,
+                                        size: 28,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ],
@@ -259,7 +302,6 @@ class _ChatOngoingState extends State<ChatOngoing> {
             ],
           ),
         ),
-      ],
     );
   }
 }
