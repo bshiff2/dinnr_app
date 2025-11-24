@@ -50,7 +50,7 @@ class HomePageUI extends StatelessWidget {
               left: 0,
               right: 0,
               top: 0,
-              bottom: 80,
+              bottom: 0,
               child: Center(
                 child: Container(
                   width: double.infinity,
@@ -109,88 +109,6 @@ class HomePageUI extends StatelessWidget {
                       ),
                     ],
                   ),
-                ),
-              ),
-            ),
-            // Bottom Navigation Bar
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 3),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  spacing: 10,
-                  children: [
-                    Container(
-                      width: double.infinity,
-                      height: 67,
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          ConstrainedBox(
-                            constraints: BoxConstraints(maxWidth: 500),
-                            child: Container(
-                              width: double.infinity,
-                              height: 67,
-                              decoration: ShapeDecoration(
-                                color: const Color(0xCC222222),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.only(
-                                    topLeft: Radius.circular(20),
-                                    topRight: Radius.circular(20),
-                                  ),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                children: [
-                                  // Home button (current page - highlighted)
-                                  IconButton(
-                                    onPressed: () {},
-                                    icon: Icon(
-                                      Icons.home,
-                                      color: Colors.white,
-                                      size: 28,
-                                    ),
-                                  ),
-                                  // Chat button
-                                  IconButton(
-                                    onPressed: () {
-                                      Navigator.pushReplacementNamed(context, '/chat');
-                                    },
-                                    icon: Icon(
-                                      Icons.chat_bubble,
-                                      color: Colors.white38,
-                                      size: 28,
-                                    ),
-                                  ),
-                                  // Profile button
-                                  IconButton(
-                                    onPressed: () {
-                                      Navigator.pushReplacementNamed(context, '/profile');
-                                    },
-                                    icon: Icon(
-                                      Icons.person,
-                                      color: Colors.white38,
-                                      size: 28,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
                 ),
               ),
             ),

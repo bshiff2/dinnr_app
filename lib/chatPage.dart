@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'home_page.dart';
 import 'profile.dart';
+import 'page_layout.dart';
 
 // Temporary main() for standalone testing - remove when integrating with main.dart
 void main() {
@@ -39,7 +40,7 @@ class _ChatOngoingState extends State<ChatOngoing> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final List<String> _messages = [];
-  
+
   late stt.SpeechToText _speech;
   bool _isListening = false;
   bool _speechAvailable = false;
@@ -68,10 +69,10 @@ class _ChatOngoingState extends State<ChatOngoing> {
 
   void _startListening() async {
     if (!_speechAvailable) return;
-    
+
     setState(() => _isListening = true);
     _controller.clear();
-    
+
     await _speech.listen(
       onResult: (result) {
         setState(() {
@@ -92,12 +93,12 @@ class _ChatOngoingState extends State<ChatOngoing> {
   void _sendMessage() {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
-    
+
     setState(() {
       _messages.add(text);
     });
     _controller.clear();
-    
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         try {
@@ -122,186 +123,129 @@ class _ChatOngoingState extends State<ChatOngoing> {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: const Color(0xFF121212),
-      child: Container(
-        width: double.infinity,
-        height: MediaQuery.of(context).size.height,
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(color: const Color(0xFF121212)),
-        child: Stack(
-          children: [
-            // Messages area
-            Positioned(
-              left: 0,
-              top: 0,
-              right: 0,
-              bottom: 140,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                child: _messages.isEmpty
-                    ? const SingleChildScrollView(
-                        child: SizedBox.shrink(),
-                      )
-                    : ListView.builder(
-                        controller: _scrollController,
-                        itemCount: _messages.length,
-                        itemBuilder: (context, index) {
-                          final msg = _messages[index];
-                          return Align(
-                            alignment: Alignment.topRight,
-                            child: Container(
-                              margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: Colors.green[400],
-                                borderRadius: BorderRadius.only(
-                                  topLeft: Radius.circular(16),
-                                  topRight: Radius.circular(16),
-                                  bottomLeft: Radius.circular(16),
-                                  bottomRight: Radius.circular(4),
-                                ),
-                              ),
-                              child: Text(
-                                msg,
-                                style: const TextStyle(color: Colors.white),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-              ),
-            ),
-            // Bottom input and navigation
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 3),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // Chat input box
-                    Container(
-                      width: double.infinity,
-                      height: 56,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 500),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          decoration: ShapeDecoration(
-                            color: const Color(0xFF1E1E1E),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(28),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: TextField(
-                                  controller: _controller,
-                                  onSubmitted: (_) => _sendMessage(),
-                                  decoration: const InputDecoration(
-                                    hintText: 'Type to chat',
-                                    hintStyle: TextStyle(color: Colors.white54),
-                                    border: InputBorder.none,
+    return PageLayout(
+      child: Material(
+        color: const Color(0xFF121212),
+        child: Container(
+          width: double.infinity,
+          height: MediaQuery.of(context).size.height,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(color: const Color(0xFF121212)),
+          child: Stack(
+            children: [
+              // Messages area
+              Positioned(
+                left: 0,
+                top: 0,
+                right: 0,
+                bottom: 140,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  child: _messages.isEmpty
+                      ? const SingleChildScrollView(
+                          child: SizedBox.shrink(),
+                        )
+                      : ListView.builder(
+                          controller: _scrollController,
+                          itemCount: _messages.length,
+                          itemBuilder: (context, index) {
+                            final msg = _messages[index];
+                            return Align(
+                              alignment: Alignment.topRight,
+                              child: Container(
+                                margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: Colors.green[400],
+                                  borderRadius: BorderRadius.only(
+                                    topLeft: Radius.circular(16),
+                                    topRight: Radius.circular(16),
+                                    bottomLeft: Radius.circular(16),
+                                    bottomRight: Radius.circular(4),
                                   ),
+                                ),
+                                child: Text(
+                                  msg,
                                   style: const TextStyle(color: Colors.white),
                                 ),
                               ),
-                              // Voice input button
-                              IconButton(
-                                onPressed: _isListening ? _stopListening : _startListening,
-                                icon: Icon(
-                                  _isListening ? Icons.mic : Icons.mic_none,
-                                  color: _isListening ? Colors.red : Colors.white70,
-                                ),
-                              ),
-                              IconButton(
-                                onPressed: _sendMessage,
-                                icon: const Icon(Icons.send, color: Colors.white70),
-                              ),
-                            ],
-                          ),
+                            );
+                          },
                         ),
-                      ),
+                ),
+              ),
+              // Bottom input
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: -20, // Decreased offset to move the chat box further downward
+                child: SafeArea(
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      bottom: MediaQuery.of(context).viewInsets.bottom, // Adjust for keyboard
                     ),
-                    const SizedBox(height: 10),
-                    // Navigation bar
-                    Container(
+                    child: Container(
                       width: double.infinity,
-                      height: 67,
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      padding: const EdgeInsets.symmetric(vertical: 3),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 500),
-                            child: Container(
-                              width: double.infinity,
-                              height: 67,
-                              decoration: ShapeDecoration(
-                                color: const Color(0xCC222222),
-                                shape: const RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.only(
-                                    topLeft: Radius.circular(20),
-                                    topRight: Radius.circular(20),
+                          // Chat input box
+                          Container(
+                            width: double.infinity,
+                            height: 56,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 500),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                decoration: ShapeDecoration(
+                                  color: const Color(0xFF1E1E1E),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(28),
                                   ),
                                 ),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                children: [
-                                  // Home button
-                                  IconButton(
-                                    onPressed: () {
-                                      Navigator.pushReplacementNamed(context, '/home');
-                                    },
-                                    icon: Icon(
-                                      Icons.home,
-                                      color: Colors.white38,
-                                      size: 28,
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: TextField(
+                                        controller: _controller,
+                                        onSubmitted: (_) => _sendMessage(),
+                                        decoration: const InputDecoration(
+                                          hintText: 'Type to chat',
+                                          hintStyle: TextStyle(color: Colors.white54),
+                                          border: InputBorder.none,
+                                        ),
+                                        style: const TextStyle(color: Colors.white),
+                                      ),
                                     ),
-                                  ),
-                                  // Chat button (current page - highlighted)
-                                  IconButton(
-                                    onPressed: () {},
-                                    icon: Icon(
-                                      Icons.chat_bubble,
-                                      color: Colors.white,
-                                      size: 28,
+                                    // Voice input button
+                                    IconButton(
+                                      onPressed: _isListening ? _stopListening : _startListening,
+                                      icon: Icon(
+                                        _isListening ? Icons.mic : Icons.mic_none,
+                                        color: _isListening ? Colors.red : Colors.white70,
+                                      ),
                                     ),
-                                  ),
-                                  // Profile button
-                                  IconButton(
-                                    onPressed: () {
-                                      Navigator.pushReplacementNamed(context, '/profile');
-                                    },
-                                    icon: Icon(
-                                      Icons.person,
-                                      color: Colors.white38,
-                                      size: 28,
+                                    IconButton(
+                                      onPressed: _sendMessage,
+                                      icon: const Icon(Icons.send, color: Colors.white70),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

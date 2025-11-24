@@ -1,14 +1,23 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'home_page.dart';
 import 'chatPage.dart';
 import 'profile.dart';
-import 'login_page.dart';
+import 'navbar.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
+  // Set the status bar text color to white
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent, // Make status bar transparent
+      statusBarIconBrightness: Brightness.light, // Set icons to light mode
+      statusBarBrightness: Brightness.dark, // For iOS devices
+    ),
+  );
+
   try {
     await Firebase.initializeApp();
   } catch (e) {
@@ -49,89 +58,26 @@ class MyApp extends StatelessWidget {
   const MyApp({super.key});
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Dinnr',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
       ),
-      home: const AuthGate(),
-      routes: {
-        '/home': (context) => HomePageUI(),
-        '/chat': (context) => ChatOngoing(),
-        '/profile': (context) => Profile(),
-      },
-    );
-  }
-}
-
-class AuthGate extends StatelessWidget {
-  const AuthGate({super.key, this.auth});
-
-  final FirebaseAuth? auth;
-
-  @override
-  Widget build(BuildContext context) {
-    final firebaseAuth = auth ?? FirebaseAuth.instance;
-    return StreamBuilder<User?>(
-      stream: firebaseAuth.authStateChanges(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
-
-        if (snapshot.hasData && snapshot.data != null) {
-          return HomePage(user: snapshot.data!, auth: firebaseAuth);
-        }
-
-        return LoginPage(auth: firebaseAuth);
-      },
-    );
-  }
-}
-
-class HomePage extends StatelessWidget {
-  const HomePage({super.key, required this.user, this.auth});
-
-  final User user;
-  final FirebaseAuth? auth;
-
-  FirebaseAuth get _auth => auth ?? FirebaseAuth.instance;
-
-  Future<void> _signOut(BuildContext context) async {
-    await _auth.signOut();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Signed out')),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Dinnr'),
-        actions: [
-          IconButton(
-            onPressed: () => _signOut(context),
-            icon: const Icon(Icons.logout),
-            tooltip: 'Sign out',
-          ),
-        ],
-      ),
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.fastfood, size: 72),
-            const SizedBox(height: 16),
-            Text('Hi ${user.email ?? user.uid}', style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: 8),
-            const Text('You are now signed in with Firebase Auth.'),
-          ],
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'Dinnr',
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+          useMaterial3: true,
+          splashFactory: NoSplash.splashFactory, // Disable ripple effect globally
         ),
+        home: NavBar(child: HomePageUI()),
+        routes: {
+          '/home': (context) => NavBar(child: HomePageUI()),
+          '/chat': (context) => NavBar(child: ChatOngoing()),
+          '/profile': (context) => NavBar(child: Profile()),
+        },
       ),
     );
   }
