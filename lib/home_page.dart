@@ -112,6 +112,19 @@ class HomePageUI extends StatelessWidget {
                 ),
               ),
             ),
+              Stack(
+                children: <Widget>[
+                  Positioned(
+                    top: 675,
+                    left: 125,
+                    child: Image.asset(
+                      'lib/assets/icons/HomeArrow.png',
+                      width: 100,
+                      height: 100,
+                    ),
+                  ),
+                ],
+              ),
           ],
         ),
       ),
