@@ -12,24 +12,21 @@ class PageLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        // Background layer
-        Container(
-          decoration: BoxDecoration(
-            color: backgroundColor,
+    return Scaffold(
+      backgroundColor: backgroundColor,
+      body: Stack(
+        children: [
+          // Content layer with reserved space for navbar
+          Column(
+            children: [
+              Expanded(
+                child: child,
+              ),
+              SizedBox(height: 90), // Reserve space for the navbar
+            ],
           ),
-        ),
-        // Content layer with reserved space for navbar
-        Column(
-          children: [
-            Expanded(
-              child: child,
-            ),
-            SizedBox(height: 90), // Reserve space for the navbar
-          ],
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

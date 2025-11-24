@@ -1,8 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:velocity_x/velocity_x.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:forui/forui.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'auth.dart';
 import 'profile_setup.dart';
@@ -49,9 +45,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
       );
       if (mounted) {
         // Navigate to profile setup
-        Navigator.of(context).pushReplacement(
+        await Navigator.of(context).push(
           MaterialPageRoute(builder: (context) => const ProfileSetupScreen()),
         );
+        // After profile setup is complete, navigate to profile page and clear the stack
+        if (mounted) {
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            '/profile',
+            (route) => false,
+          );
+        }
       }
     } catch (e) {
       setState(() {
@@ -88,154 +91,263 @@ class _SignUpScreenState extends State<SignUpScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          "Create Account",
-          style: GoogleFonts.poppins(
-            fontSize: 24.sp,
-            fontWeight: FontWeight.bold,
+      backgroundColor: const Color(0xFF121212),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('lib/assets/gradient/Gradients.png'),
+            fit: BoxFit.cover,
           ),
         ),
-        backgroundColor: Colors.deepPurple,
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.all(16.w),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              30.h.heightBox,
-              
-              // App Logo or Icon
-              Icon(
-                Icons.eco_rounded,
-                size: 80.sp,
-                color: Colors.deepPurple,
-              ),
-              
-              20.h.heightBox,
-              
-              Text(
-                "Find great foods!",
-                style: GoogleFonts.poppins(
-                  fontSize: 24.sp,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              
-              10.h.heightBox,
-              
-              Text(
-                "Create an account to start finding the best Dinnrs!",
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                  fontSize: 16.sp,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              
-              30.h.heightBox,
-
-              // Error message if any
-              if (_errorMessage != null)
-                Container(
-                  padding: EdgeInsets.all(8.w),
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade50,
-                    borderRadius: BorderRadius.circular(8.r),
-                  ),
-                  child: Text(
-                    _errorMessage!,
-                    style: TextStyle(
-                      color: Colors.red,
-                      fontSize: 14.sp,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-
-              if (_errorMessage != null) 20.h.heightBox,
-              
-              // Email field
-              FTextField(
-                controller: _emailController,
-                label: const Text("Email"),
-                keyboardType: TextInputType.emailAddress,
-                enabled: !_isLoading,
-              ),
-              
-              16.h.heightBox,
-              
-              // Password field
-              FTextField(
-                controller: _passwordController,
-                label: const Text("Password"),
-                obscureText: true,
-                enabled: !_isLoading,
-                maxLines: 1,
-              ),
-              
-              16.h.heightBox,
-              
-              // Confirm Password field
-              FTextField(
-                controller: _confirmPasswordController,
-                label: const Text("Confirm Password"),
-                obscureText: true,
-                enabled: !_isLoading,
-                maxLines: 1,
-              ),
-              
-              20.h.heightBox,
-              
-              // Sign up button
-              FButton(
-                label: _isLoading 
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : const Text('Create Account'),
-                style: FButtonStyle.outline,
-                onPress: _isLoading ? null : _signUp,
-              ),
-              
-              20.h.heightBox,
-              
-              // Sign in section
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(
-                    "Already have an account? ",
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 14.sp,
+                  // Back button
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      onPressed: () => Navigator.of(context).pop(),
                     ),
                   ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop(); // Return to sign in screen
-                    },
-                    child: Text(
-                      "Sign In",
+                  
+                  const SizedBox(height: 20),
+                  
+                  // Food Icon
+                  const Center(
+                    child: Icon(
+                      Icons.restaurant_menu,
+                      size: 80,
+                      color: Colors.white,
+                    ),
+                  ),
+                    
+                    const SizedBox(height: 30),
+                    
+                    const Text(
+                      "Find great restaurants!",
                       style: TextStyle(
-                        color: Colors.deepPurple,
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        fontSize: 32,
+                        fontFamily: 'SF Compact Rounded',
+                        fontWeight: FontWeight.w700,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    
+                    const SizedBox(height: 10),
+                    
+                    const Text(
+                      "Create an account to start finding the best places to eat!",
+                      style: TextStyle(
+                        color: Color(0xFFA0A0A0),
+                        fontSize: 16,
+                        fontFamily: 'SF Compact Rounded',
+                        fontWeight: FontWeight.w400,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    
+                    const SizedBox(height: 40),
+
+                    // Error message if any
+                    if (_errorMessage != null)
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(15),
+                          border: Border.all(color: Colors.red.withOpacity(0.5)),
+                        ),
+                        child: Text(
+                          _errorMessage!,
+                          style: const TextStyle(
+                            color: Colors.red,
+                            fontSize: 14,
+                            fontFamily: 'SF Compact Rounded',
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+
+                    if (_errorMessage != null) const SizedBox(height: 20),
+                    
+                    // Email field
+                    TextField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      enabled: !_isLoading,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontFamily: 'SF Compact Rounded',
+                      ),
+                      decoration: InputDecoration(
+                        labelText: 'Email',
+                        labelStyle: const TextStyle(
+                          color: Color(0xFFA0A0A0),
+                          fontFamily: 'SF Compact Rounded',
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: const BorderSide(color: Color(0xFF4C0041)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: const BorderSide(color: Color(0xFF74004A), width: 2),
+                        ),
+                        filled: true,
+                        fillColor: const Color(0xFF4C0041).withOpacity(0.3),
                       ),
                     ),
-                  ),
-                ],
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Password field
+                    TextField(
+                      controller: _passwordController,
+                      obscureText: true,
+                      enabled: !_isLoading,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontFamily: 'SF Compact Rounded',
+                      ),
+                      decoration: InputDecoration(
+                        labelText: 'Password',
+                        labelStyle: const TextStyle(
+                          color: Color(0xFFA0A0A0),
+                          fontFamily: 'SF Compact Rounded',
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: const BorderSide(color: Color(0xFF4C0041)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: const BorderSide(color: Color(0xFF74004A), width: 2),
+                        ),
+                        filled: true,
+                        fillColor: const Color(0xFF4C0041).withOpacity(0.3),
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Confirm Password field
+                    TextField(
+                      controller: _confirmPasswordController,
+                      obscureText: true,
+                      enabled: !_isLoading,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontFamily: 'SF Compact Rounded',
+                      ),
+                      decoration: InputDecoration(
+                        labelText: 'Confirm Password',
+                        labelStyle: const TextStyle(
+                          color: Color(0xFFA0A0A0),
+                          fontFamily: 'SF Compact Rounded',
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: const BorderSide(color: Color(0xFF4C0041)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: const BorderSide(color: Color(0xFF74004A), width: 2),
+                        ),
+                        filled: true,
+                        fillColor: const Color(0xFF4C0041).withOpacity(0.3),
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Sign up button
+                    Container(
+                      height: 50,
+                      decoration: ShapeDecoration(
+                        gradient: const LinearGradient(
+                          begin: Alignment(0.00, 0.50),
+                          end: Alignment(1.00, 0.50),
+                          colors: [Color(0xFF74004A), Color(0xFF197400)],
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: _isLoading ? null : _signUp,
+                          borderRadius: BorderRadius.circular(20),
+                          child: Center(
+                            child: _isLoading
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Create Account',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontFamily: 'SF Compact Rounded',
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 20),
+                    
+                    // Sign in section
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text(
+                          "Already have an account? ",
+                          style: TextStyle(
+                            color: Color(0xFFA0A0A0),
+                            fontSize: 14,
+                            fontFamily: 'SF Compact Rounded',
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.of(context).pop(); // Return to sign in screen
+                          },
+                          child: const Text(
+                            "Sign In",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontFamily: 'SF Compact Rounded',
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    
+                    const SizedBox(height: 20),
+                  ],
+                ),
               ),
-            ],
+            ),
           ),
         ),
       ),
