@@ -1,10 +1,12 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'home_page.dart';
 import 'chatPage.dart';
 import 'profile.dart';
 import 'navbar.dart';
+import 'login.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -58,27 +60,35 @@ class MyApp extends StatelessWidget {
   const MyApp({super.key});
   @override
   Widget build(BuildContext context) {
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
-        statusBarBrightness: Brightness.dark,
-      ),
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        title: 'Dinnr',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-          useMaterial3: true,
-          splashFactory: NoSplash.splashFactory, // Disable ripple effect globally
-        ),
-        home: NavBar(child: HomePageUI()),
-        routes: {
-          '/home': (context) => NavBar(child: HomePageUI()),
-          '/chat': (context) => NavBar(child: ChatOngoing()),
-          '/profile': (context) => NavBar(child: Profile()),
-        },
-      ),
+    return ScreenUtilInit(
+      designSize: const Size(375, 812), // iPhone 11 Pro size, adjust as needed
+      minTextAdapt: true,
+      splitScreenMode: true,
+      builder: (context, child) {
+        return AnnotatedRegion<SystemUiOverlayStyle>(
+          value: const SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness: Brightness.light,
+            statusBarBrightness: Brightness.dark,
+          ),
+          child: MaterialApp(
+            debugShowCheckedModeBanner: false,
+            title: 'Dinnr',
+            theme: ThemeData(
+              colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+              useMaterial3: true,
+              splashFactory: NoSplash.splashFactory, // Disable ripple effect globally
+            ),
+            home: NavBar(child: HomePageUI()),
+            routes: {
+              '/home': (context) => NavBar(child: HomePageUI()),
+              '/chat': (context) => NavBar(child: ChatOngoing()),
+              '/profile': (context) => NavBar(child: Profile()),
+              '/login': (context) => const LoginScreen(),
+            },
+          ),
+        );
+      },
     );
   }
 }
