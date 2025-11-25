@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
-import 'config.dart';
 import 'home_page.dart';
 import 'page_layout.dart';
 import 'profile.dart';
 import 'services/ai_chat_service.dart';
+import 'services/config_service.dart';
 
 // Temporary main() for standalone testing - remove when integrating with main.dart
 void main() {
@@ -54,10 +54,11 @@ class _ChatOngoingState extends State<ChatOngoing> {
   @override
   void initState() {
     super.initState();
+    final config = ConfigService();
     _aiService = AIChatService(
-      apiKey: AppConfig.openAIKey,
-      basePrompt: AppConfig.aiPrompt,
-      model: AppConfig.aiModel,
+      apiKey: config.openAIKey,
+      basePrompt: config.aiPrompt,
+      model: config.aiModel,
     );
     _speech = stt.SpeechToText();
     _initSpeech();

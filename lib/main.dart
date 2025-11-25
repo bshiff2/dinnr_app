@@ -8,6 +8,7 @@ import 'chatPage.dart';
 import 'profile.dart';
 import 'navbar.dart';
 import 'login.dart';
+import 'services/config_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,6 +26,9 @@ Future<void> main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    
+    // Load AI config from Firestore (falls back to local config if fails)
+    await ConfigService().loadConfig();
   } catch (e) {
     runApp(MaterialApp(
       home: Scaffold(
