@@ -46,6 +46,7 @@ class _ChatOngoingState extends State<ChatOngoing> {
 
   late final AIChatService _aiService;
   bool _isSending = false;
+  bool _isAudioMode = false; // Track if user used voice input
 
   late stt.SpeechToText _speech;
   bool _isListening = false;
@@ -69,7 +70,7 @@ class _ChatOngoingState extends State<ChatOngoing> {
       onStatus: (status) {
         if (status == 'done' && _isListening) {
           setState(() => _isListening = false);
-          _sendMessage();
+          _sendMessage(useAudio: true); // Use audio mode when voice input ends
         }
       },
       onError: (error) {
@@ -82,7 +83,10 @@ class _ChatOngoingState extends State<ChatOngoing> {
   void _startListening() async {
     if (!_speechAvailable) return;
 
-    setState(() => _isListening = true);
+    setState(() {
+      _isListening = true;
+      _isAudioMode = true; // Mark as audio mode
+    });
     _controller.clear();
 
     await _speech.listen(
@@ -102,10 +106,14 @@ class _ChatOngoingState extends State<ChatOngoing> {
     setState(() => _isListening = false);
   }
 
-  Future<void> _sendMessage() async {
+  Future<void> _sendMessage({bool useAudio = false}) async {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
     _controller.clear();
+    
+    final shouldUseAudio = useAudio || _isAudioMode;
+    _isAudioMode = false; // Reset audio mode
+    
     setState(() {
       _messages.add(_ChatMessage(text: text, isUser: true));
       _isSending = true;
@@ -125,6 +133,7 @@ class _ChatOngoingState extends State<ChatOngoing> {
       final reply = await _aiService.sendMessage(
         message: text,
         history: history,
+        useAudio: shouldUseAudio, // Play audio response if in audio mode
       );
 
       if (mounted) {
