@@ -154,10 +154,6 @@ class _ChatOngoingState extends State<ChatOngoing> {
 
       if (mounted) {
         setState(() {
-          _messages.add(_ChatMessage(
-            text: response.text,
-            isUser: false,
-            mood: response.mood,
           RestaurantData? restaurantData;
           
           // Parse restaurant data if available
@@ -172,6 +168,7 @@ class _ChatOngoingState extends State<ChatOngoing> {
           _messages.add(_ChatMessage(
             text: response.text,
             isUser: false,
+            mood: response.mood,
             restaurantData: restaurantData,
           ));
         });
@@ -267,67 +264,42 @@ class _ChatOngoingState extends State<ChatOngoing> {
                             _MikuAvatar(mood: msg.mood ?? MikuMood.neutral),
                             const SizedBox(width: 8),
                             Flexible(
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFF2C2C2C),
-                                  borderRadius: BorderRadius.only(
-                                    topLeft: Radius.circular(4),
-                                    topRight: Radius.circular(16),
-                                    bottomLeft: Radius.circular(16),
-                                    bottomRight: Radius.circular(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFF2C2C2C),
+                                      borderRadius: BorderRadius.only(
+                                        topLeft: Radius.circular(4),
+                                        topRight: Radius.circular(16),
+                                        bottomLeft: Radius.circular(16),
+                                        bottomRight: Radius.circular(16),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      msg.text,
+                                      style: const TextStyle(color: Colors.white),
+                                    ),
                                   ),
-                                ),
-                                child: Text(
-                                  msg.text,
-                                  style: const TextStyle(color: Colors.white),
-                                ),
+                                  // Show restaurant card if available
+                                  if (msg.restaurantData != null)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 8),
+                                      child: RestaurantCard(
+                                        name: msg.restaurantData!.name,
+                                        description: msg.restaurantData!.description,
+                                        imageUrl: msg.restaurantData!.imageUrl,
+                                        address: msg.restaurantData!.address,
+                                        rating: msg.restaurantData!.rating,
+                                        priceLevel: msg.restaurantData!.priceLevel,
+                                        cuisineType: msg.restaurantData!.cuisineType,
+                                      ),
+                                    ),
+                                ],
                               ),
                             ),
-                      return Align(
-                        alignment: msg.isUser ? Alignment.centerRight : Alignment.centerLeft,
-                        child: Column(
-                          crossAxisAlignment: msg.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                              constraints: BoxConstraints(
-                                maxWidth: MediaQuery.of(context).size.width * 0.75,
-                              ),
-                              decoration: BoxDecoration(
-                                color: msg.isUser ? Colors.green[400] : const Color(0xFF2C2C2C),
-                                borderRadius: BorderRadius.only(
-                                  topLeft: Radius.circular(msg.isUser ? 16 : 4),
-                                  topRight: Radius.circular(msg.isUser ? 4 : 16),
-                                  bottomLeft: const Radius.circular(16),
-                                  bottomRight: const Radius.circular(16),
-                                ),
-                              ),
-                              child: Text(
-                                msg.text,
-                                style: const TextStyle(color: Colors.white),
-                              ),
-                            ),
-                            // Show restaurant card if available
-                            if (msg.restaurantData != null)
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 8),
-                                child: ConstrainedBox(
-                                  constraints: BoxConstraints(
-                                    maxWidth: MediaQuery.of(context).size.width * 0.85,
-                                  ),
-                                  child: RestaurantCard(
-                                    name: msg.restaurantData!.name,
-                                    description: msg.restaurantData!.description,
-                                    imageUrl: msg.restaurantData!.imageUrl,
-                                    address: msg.restaurantData!.address,
-                                    rating: msg.restaurantData!.rating,
-                                    priceLevel: msg.restaurantData!.priceLevel,
-                                    cuisineType: msg.restaurantData!.cuisineType,
-                                  ),
-                                ),
-                              ),
                           ],
                         ),
                       );
@@ -393,19 +365,6 @@ class _ChatOngoingState extends State<ChatOngoing> {
       ),
     );
   }
-}
-
-class _ChatMessage {
-  const _ChatMessage({
-    required this.text,
-    required this.isUser,
-    this.mood,
-    this.restaurantData,
-  });
-
-  final String text;
-  final bool isUser;
-  final MikuMood? mood; // Mood for AI messages
 }
 
 // ─── Miku Avatar Widget ───────────────────────────────────────────────────────
@@ -499,6 +458,21 @@ class _MikuAvatar extends StatelessWidget {
           },
         ),
       ),
+    );
+  }
+}
+
+class _ChatMessage {
+  const _ChatMessage({
+    required this.text,
+    required this.isUser,
+    this.mood,
+    this.restaurantData,
+  });
+
+  final String text;
+  final bool isUser;
+  final MikuMood? mood;
   final RestaurantData? restaurantData;
 }
 

@@ -91,56 +91,60 @@ Example: "[EXCITED] Oh, you have to try that place!"
   // ─── Send Message ───────────────────────────────────────────────────────────
   /// Sends a user [message] with optional conversation [history].
   /// Include [locationContext] to give AI info about user's location and nearby places.
-  /// Returns AIResponse with text and detected mood.
-  Future<AIResponse> sendMessage({
-  /// Returns an [AIChatResponse] with text and optional restaurant data.
-  Future<AIChatResponse> sendMessage({
   /// If [useAudio] is true, also generates and plays audio response.
-  /// Returns the AI's reply text.
-  Future<String> sendMessage({
+  /// Returns AIChatResponse with text, optional restaurant data, and detected mood.
+  Future<AIChatResponse> sendMessage({
     required String message,
     List<AIChatMessage> history = const [],
     bool useAudio = false,
     String? locationContext,
   }) async {
-    String prompt = useAudio ? audioPrompt : _basePrompt;
+    String basePrompt = useAudio ? audioPrompt : _basePrompt;
     
     // Add location context to system prompt if available
     if (locationContext != null && locationContext.isNotEmpty) {
-      prompt = '$prompt\n\nLOCATION INFO:\n$locationContext\n\nUse this location info to recommend specific nearby restaurants when asked about food places.';
+      basePrompt = '$basePrompt\n\nLOCATION INFO:\n$locationContext\n\nUse this location info to recommend specific nearby restaurants when asked about food places.';
     }
+    
     final enhancedPrompt = '''
-$_basePrompt
+$basePrompt
 
-When recommending restaurants, ALWAYS respond in this exact format:
-1. First, write your natural conversational response
-2. Then, if you're recommending a specific restaurant, add it at the end in this JSON format:
+CRITICAL: When recommending restaurants, you MUST follow this EXACT format:
+1. Write your conversational response (WITHOUT mentioning the restaurant JSON structure)
+2. Add a blank line
+3. Add the marker: RESTAURANT_DATA:
+4. Add the JSON object (properly formatted, one per response)
 
-RESTAURANT_DATA:
+The JSON MUST use this structure:
 {
   "name": "Restaurant Name",
-  "description": "Brief description of the restaurant and what makes it special",
-  "imageUrl": "https://placeholder-url.com/restaurant.jpg",
-  "address": "Full address if known, otherwise general area",
+  "description": "Brief compelling description",
+  "imageUrl": "https://images.unsplash.com/photo-XXXXX?w=800",
+  "address": "Full address or area",
   "rating": 4.5,
   "priceLevel": "\$\$",
-  "cuisineType": "Cuisine type"
+  "cuisineType": "Type of cuisine"
 }
 
-Example:
-"Here is a nearby option for burgers:
+IMPORTANT RULES:
+- Only add ONE restaurant per response
+- The RESTAURANT_DATA: marker MUST be on its own line
+- The JSON must be valid (proper quotes, commas, braces)
+- Do NOT show the JSON structure to the user in your conversational text
+- Use actual Unsplash image URLs
 
-Burgersmith offers hand-crafted patties with house-made buns and customizable toppings. They're known for their Classic Smith burger and quick, friendly service. Great for a casual meal!
+Example response:
+"[EXCITED] Both spots are perfect for a cozy meal! Let me tell you about a great Asian fusion place nearby.
 
 RESTAURANT_DATA:
 {
-  "name": "Burgersmith",
-  "description": "Hand-crafted patties, house-made buns, and customizable toppings. Popular for Classic Smith and Savory Bacon burgers. Quick service, solid craft beer lineup.",
-  "imageUrl": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800",
-  "address": "Perkins & Main St",
+  "name": "Noodle & Company",
+  "description": "A casual spot for delicious Asian-inspired dishes like pad thai and ramen. Perfect for a cozy meal!",
+  "imageUrl": "https://images.unsplash.com/photo-1617093727343-374698b1b08d?w=800",
+  "address": "Baton Rouge, LA",
   "rating": 4.5,
   "priceLevel": "\$\$",
-  "cuisineType": "American"
+  "cuisineType": "Asian"
 }"
 
 Note: For imageUrl, use relevant Unsplash URLs like:
@@ -155,11 +159,6 @@ Note: For imageUrl, use relevant Unsplash URLs like:
 
     final messages = <Map<String, String>>[
       {'role': 'system', 'content': enhancedPrompt},
-    // Use shorter prompt for audio mode
-    final prompt = useAudio ? audioPrompt : _basePrompt;
-    
-    final messages = <Map<String, String>>[
-      {'role': 'system', 'content': prompt},
       ...history.map((msg) => msg.toJson()),
       {'role': 'user', 'content': message},
     ];
@@ -192,9 +191,24 @@ Note: For imageUrl, use relevant Unsplash URLs like:
       throw const AIChatException('OpenAI returned an empty response.');
     }
 
-    // Parse mood and clean text
-    final parsed = _parseMoodAndText(reply.trim());
-    return _parseResponse(reply.trim());
+    final trimmedReply = reply.trim();
+    
+    // Parse mood and text
+    final parsed = _parseMoodAndText(trimmedReply);
+    
+    // Parse restaurant data
+    final parsedResponse = _parseResponse(parsed.text);
+    
+    // Generate and play audio if requested
+    if (useAudio) {
+      await _speakText(parsedResponse.text);
+    }
+
+    return AIChatResponse(
+      text: parsedResponse.text,
+      restaurantData: parsedResponse.restaurantData,
+      mood: parsed.mood,
+    );
   }
 
   // ─── Parse Response ─────────────────────────────────────────────────────────
@@ -209,26 +223,41 @@ Note: For imageUrl, use relevant Unsplash URLs like:
 
     // Split into text and JSON parts
     final text = reply.substring(0, markerIndex).trim();
-    final jsonStr = reply.substring(markerIndex + marker.length).trim();
+    var jsonStr = reply.substring(markerIndex + marker.length).trim();
+    
+    // Try to extract JSON from the response (find first { to last })
+    final jsonStart = jsonStr.indexOf('{');
+    final jsonEnd = jsonStr.lastIndexOf('}');
+    
+    if (jsonStart != -1 && jsonEnd != -1 && jsonEnd > jsonStart) {
+      jsonStr = jsonStr.substring(jsonStart, jsonEnd + 1);
+    }
 
     try {
+      // Clean up any potential issues with the JSON string
+      jsonStr = jsonStr
+          .replaceAll('\n', ' ')
+          .replaceAll('  ', ' ')
+          .trim();
+      
       final jsonData = jsonDecode(jsonStr) as Map<String, dynamic>;
+      
+      // Validate required fields
+      if (jsonData['name'] == null || jsonData['description'] == null || jsonData['imageUrl'] == null) {
+        print('Invalid restaurant data: missing required fields');
+        return AIChatResponse(text: reply);
+      }
+      
       return AIChatResponse(
         text: text,
         restaurantData: jsonData,
       );
     } catch (e) {
       // If JSON parsing fails, return just the text
+      print('Failed to parse restaurant JSON: $e');
+      print('JSON string was: $jsonStr');
       return AIChatResponse(text: reply);
     }
-    final trimmedReply = reply.trim();
-
-    // Generate and play audio if requested
-    if (useAudio) {
-      await _speakText(parsed.text);
-    }
-
-    return parsed;
   }
 
   // ─── Parse Mood from Response ───────────────────────────────────────────────
@@ -314,15 +343,17 @@ Note: For imageUrl, use relevant Unsplash URLs like:
 }
 
 // ─── Response Model ───────────────────────────────────────────────────────────
-/// AI response containing text and optional restaurant data
+/// AI response containing text, optional restaurant data, and mood
 class AIChatResponse {
   const AIChatResponse({
     required this.text,
     this.restaurantData,
+    this.mood,
   });
 
   final String text;
   final Map<String, dynamic>? restaurantData;
+  final MikuMood? mood;
 }
 
 // ─── Message Model ────────────────────────────────────────────────────────────
