@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+
+import 'config.dart';
 import 'home_page.dart';
-import 'profile.dart';
 import 'page_layout.dart';
+import 'profile.dart';
+import 'services/ai_chat_service.dart';
 
 // Temporary main() for standalone testing - remove when integrating with main.dart
 void main() {
@@ -39,7 +42,10 @@ class ChatOngoing extends StatefulWidget {
 class _ChatOngoingState extends State<ChatOngoing> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  final List<String> _messages = [];
+  final List<_ChatMessage> _messages = [];
+
+  late final AIChatService _aiService;
+  bool _isSending = false;
 
   late stt.SpeechToText _speech;
   bool _isListening = false;
@@ -48,6 +54,11 @@ class _ChatOngoingState extends State<ChatOngoing> {
   @override
   void initState() {
     super.initState();
+    _aiService = AIChatService(
+      apiKey: AppConfig.openAIKey,
+      basePrompt: AppConfig.aiPrompt,
+      model: AppConfig.aiModel,
+    );
     _speech = stt.SpeechToText();
     _initSpeech();
   }
@@ -90,22 +101,58 @@ class _ChatOngoingState extends State<ChatOngoing> {
     setState(() => _isListening = false);
   }
 
-  void _sendMessage() {
+  Future<void> _sendMessage() async {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
-
-    setState(() {
-      _messages.add(text);
-    });
     _controller.clear();
+    setState(() {
+      _messages.add(_ChatMessage(text: text, isUser: true));
+      _isSending = true;
+    });
+    _scrollToBottom();
 
+    final history = _messages
+        .map(
+          (msg) => AIChatMessage(
+            role: msg.isUser ? 'user' : 'assistant',
+            content: msg.text,
+          ),
+        )
+        .toList();
+
+    try {
+      final reply = await _aiService.sendMessage(
+        message: text,
+        history: history,
+      );
+
+      if (mounted) {
+        setState(() {
+          _messages.add(_ChatMessage(text: reply, isUser: false));
+        });
+        _scrollToBottom();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('AI error: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSending = false);
+      }
+    }
+  }
+
+  void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         try {
           final max = _scrollController.position.maxScrollExtent;
           _scrollController.animateTo(
             max,
-            duration: const Duration(milliseconds: 200),
+            duration: const Duration(milliseconds: 250),
             curve: Curves.easeOut,
           );
         } catch (_) {}
@@ -118,136 +165,116 @@ class _ChatOngoingState extends State<ChatOngoing> {
     _controller.dispose();
     _scrollController.dispose();
     _speech.cancel();
+    _aiService.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return PageLayout(
-      child: Material(
-        color: const Color(0xFF121212),
-        child: Container(
-          width: double.infinity,
-          height: MediaQuery.of(context).size.height,
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(color: const Color(0xFF121212)),
-          child: Stack(
-            children: [
-              // Messages area
-              Positioned(
-                left: 0,
-                top: 0,
-                right: 0,
-                bottom: 140,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                  child: _messages.isEmpty
-                      ? const SingleChildScrollView(
-                          child: SizedBox.shrink(),
-                        )
-                      : ListView.builder(
-                          controller: _scrollController,
-                          itemCount: _messages.length,
-                          itemBuilder: (context, index) {
-                            final msg = _messages[index];
-                            return Align(
-                              alignment: Alignment.topRight,
-                              child: Container(
-                                margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                                decoration: BoxDecoration(
-                                  color: Colors.green[400],
-                                  borderRadius: BorderRadius.only(
-                                    topLeft: Radius.circular(16),
-                                    topRight: Radius.circular(16),
-                                    bottomLeft: Radius.circular(16),
-                                    bottomRight: Radius.circular(4),
-                                  ),
-                                ),
-                                child: Text(
-                                  msg,
-                                  style: const TextStyle(color: Colors.white),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                ),
-              ),
-              // Bottom input
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: -20, // Decreased offset to move the chat box further downward
-                child: SafeArea(
-                  child: Padding(
-                    padding: EdgeInsets.only(
-                      bottom: MediaQuery.of(context).viewInsets.bottom, // Adjust for keyboard
+      child: Column(
+        children: [
+          Expanded(
+            child: _messages.isEmpty
+                ? const Center(
+                    child: Text(
+                      'Start a conversation...',
+                      style: TextStyle(color: Colors.white54),
                     ),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 3),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          // Chat input box
-                          Container(
-                            width: double.infinity,
-                            height: 56,
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            child: ConstrainedBox(
-                              constraints: const BoxConstraints(maxWidth: 500),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
-                                decoration: ShapeDecoration(
-                                  color: const Color(0xFF1E1E1E),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(28),
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: TextField(
-                                        controller: _controller,
-                                        onSubmitted: (_) => _sendMessage(),
-                                        decoration: const InputDecoration(
-                                          hintText: 'Type to chat',
-                                          hintStyle: TextStyle(color: Colors.white54),
-                                          border: InputBorder.none,
-                                        ),
-                                        style: const TextStyle(color: Colors.white),
-                                      ),
-                                    ),
-                                    // Voice input button
-                                    IconButton(
-                                      onPressed: _isListening ? _stopListening : _startListening,
-                                      icon: Icon(
-                                        _isListening ? Icons.mic : Icons.mic_none,
-                                        color: _isListening ? Colors.red : Colors.white70,
-                                      ),
-                                    ),
-                                    IconButton(
-                                      onPressed: _sendMessage,
-                                      icon: const Icon(Icons.send, color: Colors.white70),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                  )
+                : ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    itemCount: _messages.length,
+                    itemBuilder: (context, index) {
+                      final msg = _messages[index];
+                      return Align(
+                        alignment: msg.isUser ? Alignment.centerRight : Alignment.centerLeft,
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: msg.isUser ? Colors.green[400] : const Color(0xFF2C2C2C),
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(msg.isUser ? 16 : 4),
+                              topRight: Radius.circular(msg.isUser ? 4 : 16),
+                              bottomLeft: const Radius.circular(16),
+                              bottomRight: const Radius.circular(16),
                             ),
                           ),
-                        ],
-                      ),
-                    ),
+                          child: Text(
+                            msg.text,
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.only(
+              left: 12,
+              right: 12,
+              top: 8,
+              bottom: 8 + MediaQuery.of(context).viewInsets.bottom,
+            ),
+            color: const Color(0xFF121212),
+            child: SafeArea(
+              child: Container(
+                height: 56,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: ShapeDecoration(
+                  color: const Color(0xFF1E1E1E),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(28),
                   ),
                 ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _controller,
+                        onSubmitted: (_) => _sendMessage(),
+                        decoration: const InputDecoration(
+                          hintText: 'Type to chat',
+                          hintStyle: TextStyle(color: Colors.white54),
+                          border: InputBorder.none,
+                        ),
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: _isListening ? _stopListening : _startListening,
+                      icon: Icon(
+                        _isListening ? Icons.mic : Icons.mic_none,
+                        color: _isListening ? Colors.red : Colors.white70,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: _isSending ? null : _sendMessage,
+                      icon: _isSending
+                          ? const SizedBox(
+                              height: 16,
+                              width: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.send, color: Colors.white70),
+                    ),
+                  ],
+                ),
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
+}
+
+class _ChatMessage {
+  const _ChatMessage({required this.text, required this.isUser});
+
+  final String text;
+  final bool isUser;
 }

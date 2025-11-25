@@ -47,3 +47,6 @@ app.*.map.json
 # Backend service account keys (do NOT commit these)
 /backend/*.json
 /backend/dinnr-b3eaf-firebase-adminsdk-fbsvc-4d9889e3ca.json
+
+# App configuration with API keys (do NOT commit)
+lib/config.dart

@@ -72,10 +72,12 @@ class NavBar extends StatelessWidget {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(20), // Rounded corners
                 child: SizedBox(
-                  height: 60, // Slightly reduce height to prevent overflow
+                  height: 70, // Increased height to show labels
                   child: BottomNavigationBar(
                     currentIndex: _getSelectedIndex(context),
                     backgroundColor: const Color(0xCC222222),
+                    selectedFontSize: 12,
+                    unselectedFontSize: 12,
                     items: const [
                       BottomNavigationBarItem(
                         icon: Icon(Icons.home),
