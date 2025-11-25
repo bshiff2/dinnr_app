@@ -52,6 +52,8 @@ dependencies:
   flutter_dotenv: ^5.2.1
   audioplayers: ^6.1.0
   path_provider: ^2.1.4
+  geolocator: ^13.0.2
+  geocoding: ^3.0.0
   
 
 dev_dependencies:
@@ -85,6 +87,7 @@ flutter:
   assets:
     - lib/assets/gradient/Gradients.png
     - lib/assets/icons/HomeArrow.png
+    - lib/assets/miku/
     - .env
 
   # An image asset can refer to one or more resolution-specific "variants", see

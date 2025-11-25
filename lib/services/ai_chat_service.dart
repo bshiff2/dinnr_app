@@ -5,22 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:audioplayers/audioplayers.dart';
 
 /// ─────────────────────────────────────────────────────────────────────────────
-/// AI Chat Service - Direct OpenAI Integration with Audio Support
-/// ─────────────────────────────────────────────────────────────────────────────
-/// 
-/// USAGE:
-/// ```dart
-/// final ai = AIChatService(
-///   apiKey: 'sk-...',
-///   basePrompt: 'You are a helpful cooking assistant.',
-/// );
-/// 
-/// // Text response
-/// final reply = await ai.sendMessage(message: 'Hello!');
-/// 
-/// // Audio response (speaks the reply in a female voice)
-/// final reply = await ai.sendMessage(message: 'Hello!', useAudio: true);
-/// ```
+/// AI Chat Service - Direct OpenAI Integration with Audio & Mood Support
 /// ─────────────────────────────────────────────────────────────────────────────
 
 /// Available TTS voices (female voices)
@@ -28,6 +13,26 @@ enum TTSVoice {
   alloy,    // Neutral
   nova,     // Female, warm
   shimmer,  // Female, expressive
+}
+
+/// Miku mood states for avatar display
+enum MikuMood {
+  happy,      // General positive, greetings
+  excited,    // Recommending something great
+  thinking,   // Processing, considering options
+  teaching,   // Explaining something
+  love,       // Romantic food/date suggestions
+  surprised,  // Interesting facts
+  confused,   // Doesn't understand
+  neutral,    // Default state
+}
+
+/// Response with mood information
+class AIResponse {
+  final String text;
+  final MikuMood mood;
+  
+  const AIResponse({required this.text, required this.mood});
 }
 
 class AIChatService {
@@ -61,24 +66,44 @@ Your personality:
 - Give quick, helpful answers (keep responses concise)
 
 Always be supportive and make food decisions fun!
+
+IMPORTANT: Start every response with a mood tag in brackets. Choose from:
+[HAPPY] - greetings, positive responses
+[EXCITED] - recommending something amazing
+[THINKING] - considering options, "let me think"
+[TEACHING] - explaining recipes, techniques, facts
+[LOVE] - romantic suggestions, date ideas
+[SURPRISED] - sharing interesting facts, "did you know"
+[CONFUSED] - need clarification
+[NEUTRAL] - general responses
+
+Example: "[EXCITED] Oh, you HAVE to try the new ramen place downtown!"
 ''';
 
   // ─── Audio Prompt (shorter for voice) ───────────────────────────────────────
   static const String audioPrompt = '''
 You are Dinnr, a friendly foodie assistant. Keep responses short and conversational since they will be spoken aloud. Be warm and enthusiastic about food recommendations.
+
+IMPORTANT: Start every response with a mood tag in brackets: [HAPPY], [EXCITED], [THINKING], [TEACHING], [LOVE], [SURPRISED], [CONFUSED], or [NEUTRAL].
+Example: "[EXCITED] Oh, you have to try that place!"
 ''';
 
   // ─── Send Message ───────────────────────────────────────────────────────────
   /// Sends a user [message] with optional conversation [history].
-  /// If [useAudio] is true, also generates and plays audio response.
-  /// Returns the AI's reply text.
-  Future<String> sendMessage({
+  /// Include [locationContext] to give AI info about user's location and nearby places.
+  /// Returns AIResponse with text and detected mood.
+  Future<AIResponse> sendMessage({
     required String message,
     List<AIChatMessage> history = const [],
     bool useAudio = false,
+    String? locationContext,
   }) async {
-    // Use shorter prompt for audio mode
-    final prompt = useAudio ? audioPrompt : _basePrompt;
+    String prompt = useAudio ? audioPrompt : _basePrompt;
+    
+    // Add location context to system prompt if available
+    if (locationContext != null && locationContext.isNotEmpty) {
+      prompt = '$prompt\n\nLOCATION INFO:\n$locationContext\n\nUse this location info to recommend specific nearby restaurants when asked about food places.';
+    }
     
     final messages = <Map<String, String>>[
       {'role': 'system', 'content': prompt},
@@ -96,7 +121,7 @@ You are Dinnr, a friendly foodie assistant. Keep responses short and conversatio
         'model': _model,
         'messages': messages,
         'temperature': 0.7,
-        'max_tokens': useAudio ? 256 : 1024, // Shorter for audio
+        'max_tokens': useAudio ? 256 : 1024,
       }),
     );
 
@@ -114,18 +139,60 @@ You are Dinnr, a friendly foodie assistant. Keep responses short and conversatio
       throw const AIChatException('OpenAI returned an empty response.');
     }
 
-    final trimmedReply = reply.trim();
+    // Parse mood and clean text
+    final parsed = _parseMoodAndText(reply.trim());
 
     // Generate and play audio if requested
     if (useAudio) {
-      await _speakText(trimmedReply);
+      await _speakText(parsed.text);
     }
 
-    return trimmedReply;
+    return parsed;
+  }
+
+  // ─── Parse Mood from Response ───────────────────────────────────────────────
+  AIResponse _parseMoodAndText(String response) {
+    final moodRegex = RegExp(r'^\[(\w+)\]\s*', caseSensitive: false);
+    final match = moodRegex.firstMatch(response);
+    
+    MikuMood mood = MikuMood.neutral;
+    String text = response;
+    
+    if (match != null) {
+      final moodTag = match.group(1)?.toUpperCase();
+      text = response.substring(match.end).trim();
+      
+      switch (moodTag) {
+        case 'HAPPY':
+          mood = MikuMood.happy;
+          break;
+        case 'EXCITED':
+          mood = MikuMood.excited;
+          break;
+        case 'THINKING':
+          mood = MikuMood.thinking;
+          break;
+        case 'TEACHING':
+          mood = MikuMood.teaching;
+          break;
+        case 'LOVE':
+          mood = MikuMood.love;
+          break;
+        case 'SURPRISED':
+          mood = MikuMood.surprised;
+          break;
+        case 'CONFUSED':
+          mood = MikuMood.confused;
+          break;
+        default:
+          mood = MikuMood.neutral;
+      }
+    }
+    
+    return AIResponse(text: text, mood: mood);
   }
 
   // ─── Text to Speech ─────────────────────────────────────────────────────────
-  /// Converts text to speech using OpenAI TTS and plays it
   Future<void> _speakText(String text) async {
     try {
       final voiceName = _voice.name;
@@ -149,7 +216,6 @@ You are Dinnr, a friendly foodie assistant. Keep responses short and conversatio
         return;
       }
 
-      // Save audio to temp file and play
       final tempDir = await getTemporaryDirectory();
       final audioFile = File('${tempDir.path}/tts_response.mp3');
       await audioFile.writeAsBytes(response.bodyBytes);
@@ -160,23 +226,10 @@ You are Dinnr, a friendly foodie assistant. Keep responses short and conversatio
     }
   }
 
-  /// Speak text directly (for replaying messages)
-  Future<void> speak(String text) async {
-    await _speakText(text);
-  }
-
-  /// Stop any currently playing audio
-  Future<void> stopAudio() async {
-    await _audioPlayer.stop();
-  }
-
-  /// Check if audio is currently playing
+  Future<void> speak(String text) async => await _speakText(text);
+  Future<void> stopAudio() async => await _audioPlayer.stop();
   bool get isPlaying => _audioPlayer.state == PlayerState.playing;
-
-  /// Clean up resources
-  void dispose() {
-    _audioPlayer.dispose();
-  }
+  void dispose() => _audioPlayer.dispose();
 }
 
 // ─── Message Model ────────────────────────────────────────────────────────────
