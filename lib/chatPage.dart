@@ -7,6 +7,7 @@ import 'profile.dart';
 import 'services/ai_chat_service.dart';
 import 'services/config_service.dart';
 import 'services/location_service.dart';
+import 'components/restaurant_card.dart';
 
 // Temporary main() for standalone testing - remove when integrating with main.dart
 void main() {
@@ -157,6 +158,21 @@ class _ChatOngoingState extends State<ChatOngoing> {
             text: response.text,
             isUser: false,
             mood: response.mood,
+          RestaurantData? restaurantData;
+          
+          // Parse restaurant data if available
+          if (response.restaurantData != null) {
+            try {
+              restaurantData = RestaurantData.fromJson(response.restaurantData!);
+            } catch (e) {
+              // If parsing fails, just skip the restaurant card
+            }
+          }
+
+          _messages.add(_ChatMessage(
+            text: response.text,
+            isUser: false,
+            restaurantData: restaurantData,
           ));
         });
         _scrollToBottom();
@@ -268,6 +284,50 @@ class _ChatOngoingState extends State<ChatOngoing> {
                                 ),
                               ),
                             ),
+                      return Align(
+                        alignment: msg.isUser ? Alignment.centerRight : Alignment.centerLeft,
+                        child: Column(
+                          crossAxisAlignment: msg.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              constraints: BoxConstraints(
+                                maxWidth: MediaQuery.of(context).size.width * 0.75,
+                              ),
+                              decoration: BoxDecoration(
+                                color: msg.isUser ? Colors.green[400] : const Color(0xFF2C2C2C),
+                                borderRadius: BorderRadius.only(
+                                  topLeft: Radius.circular(msg.isUser ? 16 : 4),
+                                  topRight: Radius.circular(msg.isUser ? 4 : 16),
+                                  bottomLeft: const Radius.circular(16),
+                                  bottomRight: const Radius.circular(16),
+                                ),
+                              ),
+                              child: Text(
+                                msg.text,
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                            ),
+                            // Show restaurant card if available
+                            if (msg.restaurantData != null)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    maxWidth: MediaQuery.of(context).size.width * 0.85,
+                                  ),
+                                  child: RestaurantCard(
+                                    name: msg.restaurantData!.name,
+                                    description: msg.restaurantData!.description,
+                                    imageUrl: msg.restaurantData!.imageUrl,
+                                    address: msg.restaurantData!.address,
+                                    rating: msg.restaurantData!.rating,
+                                    priceLevel: msg.restaurantData!.priceLevel,
+                                    cuisineType: msg.restaurantData!.cuisineType,
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
                       );
@@ -340,6 +400,7 @@ class _ChatMessage {
     required this.text,
     required this.isUser,
     this.mood,
+    this.restaurantData,
   });
 
   final String text;
@@ -438,6 +499,38 @@ class _MikuAvatar extends StatelessWidget {
           },
         ),
       ),
+  final RestaurantData? restaurantData;
+}
+
+/// Restaurant data model for embedded cards
+class RestaurantData {
+  const RestaurantData({
+    required this.name,
+    required this.description,
+    required this.imageUrl,
+    this.address,
+    this.rating,
+    this.priceLevel,
+    this.cuisineType,
+  });
+
+  final String name;
+  final String description;
+  final String imageUrl;
+  final String? address;
+  final double? rating;
+  final String? priceLevel;
+  final String? cuisineType;
+
+  factory RestaurantData.fromJson(Map<String, dynamic> json) {
+    return RestaurantData(
+      name: json['name'] as String,
+      description: json['description'] as String,
+      imageUrl: json['imageUrl'] as String,
+      address: json['address'] as String?,
+      rating: json['rating'] != null ? (json['rating'] as num).toDouble() : null,
+      priceLevel: json['priceLevel'] as String?,
+      cuisineType: json['cuisineType'] as String?,
     );
   }
 }
