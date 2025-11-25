@@ -107,24 +107,19 @@ class HomePageUI extends StatelessWidget {
                           ],
                         ),
                       ),
+                      // Arrow positioned responsively below the chips so that it hopefully appears correctly on IOS
+                      //May need further adjustment
+                      SizedBox(height: 80), // Space between chips and arrow
+                      Image.asset(
+                        'lib/assets/icons/HomeArrow.png',
+                        width: 100,
+                        height: 150,
+                      ),
                     ],
                   ),
                 ),
               ),
             ),
-              Stack(
-                children: <Widget>[
-                  Positioned(
-                    top: 675,
-                    left: 125,
-                    child: Image.asset(
-                      'lib/assets/icons/HomeArrow.png',
-                      width: 100,
-                      height: 100,
-                    ),
-                  ),
-                ],
-              ),
           ],
         ),
       ),
