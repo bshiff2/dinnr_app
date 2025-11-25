@@ -28,6 +28,7 @@ class ConfigService {
   String? _cachedPrompt;
   String? _cachedModel;
   String? _cachedApiKey;
+  String? _cachedGoogleApiKey;
   bool _isLoaded = false;
 
   // Default values if Firestore doesn't have them
@@ -58,6 +59,7 @@ Always be supportive and make food decisions fun!
         _cachedPrompt = data['prompt'] as String?;
         _cachedModel = data['model'] as String?;
         _cachedApiKey = data['apiKey'] as String?;
+        _cachedGoogleApiKey = data['googleApiKey'] as String?;
       }
       _isLoaded = true;
     } catch (e) {
@@ -81,8 +83,14 @@ Always be supportive and make food decisions fun!
     return _cachedApiKey!;
   }
 
+  /// Get Google API key for Places API (optional)
+  String? get googleApiKey => _cachedGoogleApiKey;
+
   /// Check if API key is configured
   bool get hasApiKey => _cachedApiKey != null && _cachedApiKey!.isNotEmpty;
+
+  /// Check if Google API key is configured
+  bool get hasGoogleApiKey => _cachedGoogleApiKey != null && _cachedGoogleApiKey!.isNotEmpty;
 
   /// Force reload config from Firestore
   Future<void> reload() async {
@@ -98,6 +106,7 @@ Always be supportive and make food decisions fun!
         _cachedPrompt = data['prompt'] as String?;
         _cachedModel = data['model'] as String?;
         _cachedApiKey = data['apiKey'] as String?;
+        _cachedGoogleApiKey = data['googleApiKey'] as String?;
       }
     });
   }

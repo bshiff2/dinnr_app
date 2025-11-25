@@ -3,6 +3,7 @@ import 'firebase_options.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'home_page.dart';
 import 'chatPage.dart';
 import 'profile.dart';
@@ -12,6 +13,9 @@ import 'services/config_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Load environment variables from .env file
+  await dotenv.load(fileName: ".env");
 
   // Set the status bar text color to white
   SystemChrome.setSystemUIOverlayStyle(
