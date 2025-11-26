@@ -9,6 +9,7 @@ import 'chatPage.dart';
 import 'profile.dart';
 import 'navbar.dart';
 import 'login.dart';
+import 'discover.dart';
 import 'services/config_service.dart';
 
 Future<void> main() async {
@@ -93,6 +94,7 @@ class MyApp extends StatelessWidget {
             home: NavBar(child: HomePageUI()),
             routes: {
               '/home': (context) => NavBar(child: HomePageUI()),
+              '/discover': (context) => NavBar(child: DiscoverPage()),
               '/chat': (context) => NavBar(child: ChatOngoing()),
               '/profile': (context) => NavBar(child: Profile()),
               '/login': (context) => const LoginScreen(),

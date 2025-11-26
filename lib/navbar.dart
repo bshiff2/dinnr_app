@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'home_page.dart';
 import 'chatPage.dart';
 import 'profile.dart';
+import 'discover.dart';
 
 class NavBar extends StatelessWidget {
   final Widget child;
@@ -13,10 +14,12 @@ class NavBar extends StatelessWidget {
     switch (currentRoute) {
       case '/home':
         return 0;
-      case '/chat':
+      case '/discover':
         return 1;
-      case '/profile':
+      case '/chat':
         return 2;
+      case '/profile':
+        return 3;
       default:
         return 0;
     }
@@ -43,6 +46,8 @@ class NavBar extends StatelessWidget {
     switch (route) {
       case '/home':
         return HomePageUI();
+      case '/discover':
+        return DiscoverPage();
       case '/chat':
         return ChatOngoing();
       case '/profile':
@@ -84,6 +89,10 @@ class NavBar extends StatelessWidget {
                         label: 'Home',
                       ),
                       BottomNavigationBarItem(
+                        icon: Icon(Icons.explore),
+                        label: 'Discover',
+                      ),
+                      BottomNavigationBarItem(
                         icon: Icon(Icons.chat_bubble),
                         label: 'Chat',
                       ),
@@ -98,9 +107,12 @@ class NavBar extends StatelessWidget {
                           _navigateTo(context, '/home');
                           break;
                         case 1:
-                          _navigateTo(context, '/chat');
+                          _navigateTo(context, '/discover');
                           break;
                         case 2:
+                          _navigateTo(context, '/chat');
+                          break;
+                        case 3:
                           _navigateTo(context, '/profile');
                           break;
                       }

@@ -2,10 +2,7 @@ import 'dart:convert';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 
-/// ─────────────────────────────────────────────────────────────────────────────
 /// Location Service - Get user location and search nearby places
-/// ─────────────────────────────────────────────────────────────────────────────
-
 class LocationService {
   static final LocationService _instance = LocationService._internal();
   factory LocationService() => _instance;
@@ -23,14 +20,12 @@ class LocationService {
   /// Get current position with permission handling
   Future<Position?> getCurrentPosition() async {
     try {
-      // Check if location services are enabled
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         print('Location services are disabled');
         return null;
       }
 
-      // Check permission
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
@@ -45,7 +40,6 @@ class LocationService {
         return null;
       }
 
-      // Get position
       _lastPosition = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
@@ -63,6 +57,17 @@ class LocationService {
   /// Get the last known position (faster, no GPS lookup)
   Position? get lastPosition => _lastPosition;
 
+  /// Compute distance in meters from last known position to provided coordinates
+  double? distanceFrom(double lat, double lng) {
+    if (_lastPosition == null) return null;
+    return Geolocator.distanceBetween(
+      _lastPosition!.latitude,
+      _lastPosition!.longitude,
+      lat,
+      lng,
+    );
+  }
+
   /// Get latitude/longitude as string for AI context
   Future<String> getLocationContext() async {
     final position = await getCurrentPosition();
@@ -70,7 +75,6 @@ class LocationService {
       return "User's location is unavailable.";
     }
 
-    // Try to get city name via reverse geocoding
     final city = await _getCityName(position.latitude, position.longitude);
     _lastCity = city;
 
@@ -84,7 +88,6 @@ class LocationService {
   /// Reverse geocode to get city name
   Future<String?> _getCityName(double lat, double lng) async {
     try {
-      // Using free Nominatim API for reverse geocoding
       final response = await http.get(
         Uri.parse(
           'https://nominatim.openstreetmap.org/reverse?lat=$lat&lon=$lng&format=json',
@@ -95,11 +98,11 @@ class LocationService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final address = data['address'];
-        return address['city'] ?? 
-               address['town'] ?? 
-               address['village'] ?? 
-               address['suburb'] ??
-               address['county'];
+        return address['city'] ??
+            address['town'] ??
+            address['village'] ??
+            address['suburb'] ??
+            address['county'];
       }
     } catch (e) {
       print('Geocoding error: $e');
@@ -136,14 +139,23 @@ class LocationService {
         final data = jsonDecode(response.body);
         final results = data['results'] as List;
 
-        return results.take(5).map((place) => NearbyPlace(
-          name: place['name'] ?? 'Unknown',
-          address: place['vicinity'] ?? '',
-          rating: (place['rating'] as num?)?.toDouble(),
-          priceLevel: place['price_level'] as int?,
-          isOpen: place['opening_hours']?['open_now'] as bool?,
-          types: List<String>.from(place['types'] ?? []),
-        )).toList();
+        return results.take(10).map((place) {
+          final photos = place['photos'] as List?;
+          return NearbyPlace(
+            name: place['name'] ?? 'Unknown',
+            address: place['vicinity'] ?? '',
+            rating: (place['rating'] as num?)?.toDouble(),
+            priceLevel: place['price_level'] as int?,
+            isOpen: place['opening_hours']?['open_now'] as bool?,
+            types: List<String>.from(place['types'] ?? []),
+            photoReference: photos != null && photos.isNotEmpty
+                ? photos.first['photo_reference'] as String?
+                : null,
+            userRatingsTotal: place['user_ratings_total'] as int?,
+            lat: (place['geometry']?['location']?['lat'] as num?)?.toDouble(),
+            lng: (place['geometry']?['location']?['lng'] as num?)?.toDouble(),
+          );
+        }).toList();
       }
     } catch (e) {
       print('Places API error: $e');
@@ -174,12 +186,23 @@ class LocationService {
 
   String _priceString(int level) {
     switch (level) {
-      case 1: return '\$';
-      case 2: return '\$\$';
-      case 3: return '\$\$\$';
-      case 4: return '\$\$\$\$';
-      default: return '\$';
+      case 1:
+        return '\$';
+      case 2:
+        return '\$\$';
+      case 3:
+        return '\$\$\$';
+      case 4:
+        return '\$\$\$\$';
+      default:
+        return '\$';
     }
+  }
+
+  /// Public helper for UI when priceLevel may be null
+  String priceLabel(int? level) {
+    if (level == null) return '\$';
+    return _priceString(level);
   }
 
   String? get lastCity => _lastCity;
@@ -193,18 +216,26 @@ class NearbyPlace {
   final int? priceLevel;
   final bool? isOpen;
   final List<String> types;
+  final String? photoReference;
+  final int? userRatingsTotal;
+  final double? lat;
+  final double? lng;
 
-  NearbyPlace({
+  const NearbyPlace({
     required this.name,
     required this.address,
     this.rating,
     this.priceLevel,
     this.isOpen,
     this.types = const [],
+    this.photoReference,
+    this.userRatingsTotal,
+    this.lat,
+    this.lng,
   });
 
   @override
   String toString() {
-    return '$name (${rating ?? 'N/A'}★) - $address';
+    return '$name (${rating ?? 'N/A'}) - $address';
   }
 }

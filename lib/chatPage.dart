@@ -80,7 +80,7 @@ class _ChatOngoingState extends State<ChatOngoing> {
     print('Location context: $_locationContext');
   }
 
-  void _initSpeech() async {
+  Future<void> _initSpeech() async {
     _speechAvailable = await _speech.initialize(
       onStatus: (status) {
         if (status == 'done' && _isListening) {
@@ -89,14 +89,23 @@ class _ChatOngoingState extends State<ChatOngoing> {
         }
       },
       onError: (error) {
-        setState(() => _isListening = false);
+        setState(() {
+          _isListening = false;
+        });
+        _showMicError('Mic error: ${error.errorMsg}');
       },
     );
+    if (!_speechAvailable) {
+      _showMicError('Microphone permission is needed for voice input. Please enable it in Settings.');
+    }
     setState(() {});
   }
 
   void _startListening() async {
-    if (!_speechAvailable) return;
+    if (!_speechAvailable) {
+      await _initSpeech(); // Try to reinitialize to prompt permission again
+      if (!_speechAvailable) return;
+    }
 
     setState(() {
       _isListening = true;
@@ -119,6 +128,13 @@ class _ChatOngoingState extends State<ChatOngoing> {
   void _stopListening() async {
     await _speech.stop();
     setState(() => _isListening = false);
+  }
+
+  void _showMicError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   Future<void> _sendMessage({bool useAudio = false}) async {
