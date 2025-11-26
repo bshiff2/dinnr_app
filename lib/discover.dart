@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'page_layout.dart';
 import 'services/config_service.dart';
 import 'services/location_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class DiscoverPage extends StatefulWidget {
   const DiscoverPage({super.key});
@@ -285,12 +286,14 @@ class _DiscoverCard extends StatelessWidget {
     required this.priceLabel,
     required this.apiKey,
     this.distanceMeters,
+    this.onTap,
   });
 
   final NearbyPlace place;
   final String priceLabel;
   final double? distanceMeters;
   final String? apiKey;
+  final VoidCallback? onTap;
 
   String _distanceLabel() {
     if (distanceMeters == null) return '—';
@@ -317,7 +320,9 @@ class _DiscoverCard extends StatelessWidget {
         ? NetworkImage(photoUrl) as ImageProvider
         : const AssetImage('lib/assets/gradient/Gradients.png');
 
-    return Container(
+    return GestureDetector(
+      onTap: onTap ?? () => _showDetailsSheet(context, photoUrl),
+      child: Container(
       width: double.infinity,
       decoration: BoxDecoration(
         color: const Color(0xCC1E1E1E),
@@ -453,6 +458,7 @@ class _DiscoverCard extends StatelessWidget {
           ),
         ],
       ),
+      ),
     );
   }
 
@@ -463,6 +469,227 @@ class _DiscoverCard extends StatelessWidget {
       return word[0].toUpperCase() + word.substring(1);
     }).join(' ');
   }
+
+  void _showDetailsSheet(BuildContext context, String? photoUrl) {
+    final detailsFuture = place.placeId != null
+        ? LocationService().getPlaceDetails(place.placeId!)
+        : Future.value(null);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        final detailsImage = photoUrl != null
+            ? NetworkImage(photoUrl) as ImageProvider
+            : const AssetImage('lib/assets/gradient/Gradients.png');
+
+        return FutureBuilder<PlaceDetails?>(
+          future: detailsFuture,
+          builder: (context, snapshot) {
+            final details = snapshot.data;
+
+            return DraggableScrollableSheet(
+              initialChildSize: 0.85,
+              minChildSize: 0.6,
+              maxChildSize: 0.95,
+              builder: (context, controller) {
+                return Container(
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF1E1E1E),
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                  ),
+                  child: ListView(
+                    controller: controller,
+                    padding: const EdgeInsets.all(20),
+                    children: [
+                      Container(
+                        width: 50,
+                        height: 5,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.white24,
+                          borderRadius: BorderRadius.circular(50),
+                        ),
+                      ),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Image(
+                          image: detailsImage,
+                          height: 220,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            height: 220,
+                            color: const Color(0xFF2C2C2C),
+                            child: const Center(
+                              child: Icon(Icons.restaurant, color: Colors.white38, size: 48),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        place.name,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontFamily: 'Arvo',
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 8,
+                        children: [
+                          _infoChip(Icons.star, place.rating?.toStringAsFixed(1) ?? '�?"'),
+                          _infoChip(Icons.attach_money, priceLabel.isEmpty ? '\$' : priceLabel),
+                          if (place.userRatingsTotal != null)
+                            _infoChip(Icons.people, '${place.userRatingsTotal} reviews'),
+                          _infoChip(Icons.restaurant_menu, _cuisineLabel()),
+                          _infoChip(Icons.place, _distanceLabel()),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      if (place.address.isNotEmpty)
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.location_on, color: Colors.redAccent, size: 22),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                place.address,
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 15,
+                                  fontFamily: 'SF Compact Rounded',
+                                  height: 1.5,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      if (snapshot.connectionState == ConnectionState.waiting)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child: Center(
+                            child: SizedBox(
+                              height: 22,
+                              width: 22,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                        ),
+                      if (details != null && (details.website != null || details.googleMapsUrl != null))
+                        _linkSection(context, details),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _infoChip(IconData icon, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white10,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white24),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: Colors.white70, size: 16),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13,
+              fontFamily: 'SF Compact Rounded',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _linkSection(BuildContext context, PlaceDetails details) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 18),
+        const Text(
+          'Website & Directions',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontFamily: 'Arvo',
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            if (details.website != null)
+              _linkButton(
+                context,
+                icon: Icons.language,
+                label: 'Open website',
+                url: details.website!,
+              ),
+            if (details.googleMapsUrl != null)
+              _linkButton(
+                context,
+                icon: Icons.map,
+                label: 'View in Maps',
+                url: details.googleMapsUrl!,
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _linkButton(BuildContext context, {required IconData icon, required String label, required String url}) {
+    return OutlinedButton.icon(
+      onPressed: () => _openLink(context, url),
+      icon: Icon(icon, color: Colors.white),
+      label: Text(label),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: Colors.white,
+        side: const BorderSide(color: Colors.white24),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
+  Future<void> _openLink(BuildContext context, String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invalid link')),
+      );
+      return;
+    }
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open link')),
+      );
+    }
+  }
+
 }
 
 class _MessageCard extends StatelessWidget {

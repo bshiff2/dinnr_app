@@ -141,6 +141,13 @@ class LocationService {
 
         return results.take(10).map((place) {
           final photos = place['photos'] as List?;
+          final photoRefs = photos == null
+              ? <String>[]
+              : photos
+                  .map((p) => p['photo_reference'] as String?)
+                  .whereType<String>()
+                  .toList();
+
           return NearbyPlace(
             name: place['name'] ?? 'Unknown',
             address: place['vicinity'] ?? '',
@@ -148,12 +155,12 @@ class LocationService {
             priceLevel: place['price_level'] as int?,
             isOpen: place['opening_hours']?['open_now'] as bool?,
             types: List<String>.from(place['types'] ?? []),
-            photoReference: photos != null && photos.isNotEmpty
-                ? photos.first['photo_reference'] as String?
-                : null,
+            photoReference: photoRefs.isNotEmpty ? photoRefs.first : null,
+            photoReferences: photoRefs,
             userRatingsTotal: place['user_ratings_total'] as int?,
             lat: (place['geometry']?['location']?['lat'] as num?)?.toDouble(),
             lng: (place['geometry']?['location']?['lng'] as num?)?.toDouble(),
+            placeId: place['place_id'] as String?,
           );
         }).toList();
       }
@@ -206,6 +213,39 @@ class LocationService {
   }
 
   String? get lastCity => _lastCity;
+
+  /// Fetch place details (website / maps URL) using Place Details API
+  Future<PlaceDetails?> getPlaceDetails(String placeId) async {
+    if (_googleApiKey == null || _googleApiKey!.isEmpty) {
+      return null;
+    }
+
+    try {
+      final url = Uri.parse(
+        'https://maps.googleapis.com/maps/api/place/details/json'
+        '?place_id=$placeId'
+        '&fields=website,url'
+        '&key=$_googleApiKey',
+      );
+
+      final response = await http.get(url);
+      if (response.statusCode != 200) return null;
+
+      final data = jsonDecode(response.body);
+      if (data['status'] != 'OK') return null;
+
+      final result = data['result'] as Map<String, dynamic>?;
+      if (result == null) return null;
+
+      return PlaceDetails(
+        website: result['website'] as String?,
+        googleMapsUrl: result['url'] as String?,
+      );
+    } catch (e) {
+      print('Place details error: $e');
+      return null;
+    }
+  }
 }
 
 /// Model for nearby place results
@@ -216,10 +256,12 @@ class NearbyPlace {
   final int? priceLevel;
   final bool? isOpen;
   final List<String> types;
+  final List<String> photoReferences;
   final String? photoReference;
   final int? userRatingsTotal;
   final double? lat;
   final double? lng;
+  final String? placeId;
 
   const NearbyPlace({
     required this.name,
@@ -228,14 +270,24 @@ class NearbyPlace {
     this.priceLevel,
     this.isOpen,
     this.types = const [],
+    this.photoReferences = const [],
     this.photoReference,
     this.userRatingsTotal,
     this.lat,
     this.lng,
+    this.placeId,
   });
 
   @override
   String toString() {
     return '$name (${rating ?? 'N/A'}) - $address';
   }
+}
+
+/// Details response for a place
+class PlaceDetails {
+  final String? website;
+  final String? googleMapsUrl;
+
+  const PlaceDetails({this.website, this.googleMapsUrl});
 }
