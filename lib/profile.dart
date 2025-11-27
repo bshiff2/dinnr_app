@@ -53,10 +53,11 @@ class _ProfileState extends State<Profile> {
   int _favoriteCount = 0;
   bool _favoritesLoading = true;
   bool _favoritesExpanded = false;
-  bool _settingsExpanded = false;
+  bool _settingsExpanded = true;
   bool _notifyPush = true;
   bool _notifyEmail = false;
   bool _preferVeganFirst = false;
+  double _maxDistanceMiles = 5.0;
   Map<String, dynamic>? _userProfile;
 
   void _startAuthListener() {
@@ -979,6 +980,15 @@ class _ProfileState extends State<Profile> {
                   value: _preferVeganFirst,
                   onChanged: (val) => setState(() => _preferVeganFirst = val),
                 ),
+                const SizedBox(height: 12),
+                _settingsSlider(
+                  title: 'Discover distance',
+                  subtitle: 'Max radius for nearby spots',
+                  value: _maxDistanceMiles,
+                  min: 0.5,
+                  max: 20,
+                  onChanged: (val) => setState(() => _maxDistanceMiles = double.parse(val.toStringAsFixed(1))),
+                ),
               ],
             ),
         ],
@@ -1039,15 +1049,91 @@ class _ProfileState extends State<Profile> {
     );
   }
 
+  Widget _settingsSlider({
+    required String title,
+    required String subtitle,
+    required double value,
+    required double min,
+    required double max,
+    required ValueChanged<double> onChanged,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0x331E1E1E),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontFamily: 'SF Compact Rounded',
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                      fontFamily: 'SF Compact Rounded',
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white10,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white24),
+                ),
+                child: Text(
+                  ' mi',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontFamily: 'SF Compact Rounded',
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          Slider(
+            value: value.clamp(min, max),
+            min: min,
+            max: max,
+            divisions: ((max - min) * 2).round(),
+            onChanged: onChanged,
+            activeColor: const Color(0xFF74004A),
+            inactiveColor: Colors.white24,
+          ),
+        ],
+      ),
+    );
+  }
   Widget _buildStatCard(String value, String label) {
     return Container(
       width: 111.22,
       height: 72.43,
       decoration: ShapeDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment(0.00, 0.50),
           end: Alignment(1.00, 0.50),
-          colors: [Color(0x7F4C0041), Color(0x7F4C0041)],
+          colors: [const Color(0x7F4C0041), const Color(0x7F4C0041)],
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(15),
@@ -1059,7 +1145,7 @@ class _ProfileState extends State<Profile> {
           Text(
             value,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               color: Colors.white,
               fontSize: 24,
               fontFamily: 'SF Compact Rounded',
@@ -1070,14 +1156,55 @@ class _ProfileState extends State<Profile> {
           Text(
             label,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Color(0xFFD4D4D4),
+            style: TextStyle(
+              color: const Color(0xFFD4D4D4),
               fontSize: 12,
               fontFamily: 'SF Compact Rounded',
               fontWeight: FontWeight.w400,
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildMenuItem(String title) {
+    return Container(
+      width: double.infinity,
+      height: 49.99,
+      decoration: ShapeDecoration(
+        gradient: LinearGradient(
+          begin: Alignment(0.00, 0.50),
+          end: Alignment(1.00, 0.50),
+          colors: [const Color(0xFF4C0041), const Color(0xFF4C0041)],
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Row(
+          children: [
+            Container(
+              width: 20,
+              height: 20,
+              child: Icon(Icons.star, color: Colors.white54, size: 18),
+            ),
+            const SizedBox(width: 15),
+            Text(
+              title,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontFamily: 'SF Compact Rounded',
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+            const Spacer(),
+            Icon(Icons.chevron_right, color: Colors.white54, size: 20),
+          ],
+        ),
       ),
     );
   }
