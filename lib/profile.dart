@@ -53,7 +53,7 @@ class _ProfileState extends State<Profile> {
   int _favoriteCount = 0;
   bool _favoritesLoading = true;
   bool _favoritesExpanded = false;
-  bool _settingsExpanded = true;
+  bool _settingsExpanded = false;
   bool _notifyPush = true;
   bool _notifyEmail = false;
   bool _preferVeganFirst = false;
