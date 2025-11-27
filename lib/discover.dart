@@ -17,13 +17,13 @@ class _DiscoverPageState extends State<DiscoverPage> {
   final ConfigService _configService = ConfigService();
 
   final TextEditingController _searchController = TextEditingController();
+  final _Filters _filters = _Filters();
 
   final List<_CategoryFilter> _categories = const [
     _CategoryFilter('Nearby', null),
     _CategoryFilter('Trending', 'popular'),
     _CategoryFilter('Vegan', 'vegan'),
     _CategoryFilter('Quick bites', 'fast food'),
-    _CategoryFilter('Date night', 'romantic'),
     _CategoryFilter('Family', 'family friendly'),
   ];
 
@@ -31,6 +31,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
   bool _loading = true;
   String? _error;
   List<NearbyPlace> _places = [];
+  List<NearbyPlace> _allPlaces = [];
   bool _hasActiveSearch = false;
 
   @override
@@ -79,11 +80,16 @@ class _DiscoverPageState extends State<DiscoverPage> {
     final results = await _locationService.searchNearbyRestaurants(keyword: keyword);
     if (!mounted) return;
 
+    final filtered = _filterPlaces(results);
+
     setState(() {
-      _places = results;
+      _allPlaces = results;
+      _places = filtered;
       _loading = false;
-      if (_places.isEmpty) {
+      if (_allPlaces.isEmpty) {
         _error = 'No nearby spots found. Try another filter.';
+      } else if (_places.isEmpty) {
+        _error = 'No matches found with current filters.';
       }
     });
   }
@@ -117,6 +123,245 @@ class _DiscoverPageState extends State<DiscoverPage> {
     if (hadActiveSearch) {
       _loadPlaces(keyword: _categories[_selectedCategory].keyword);
     }
+  }
+
+  void _openFilters() {
+    final initial = _filters.copy();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        double? minRating = initial.minRating;
+        double? maxDistance = initial.maxDistanceMiles;
+        int? minReviews = initial.minReviews;
+        bool openNow = initial.openNow;
+
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Color(0xFF1E1E1E),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+              child: SafeArea(
+                top: false,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 50,
+                        height: 5,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.white24,
+                          borderRadius: BorderRadius.circular(50),
+                        ),
+                      ),
+                    ),
+                    const Text(
+                      'Filters',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontFamily: 'Arvo',
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _FilterSection(
+                      title: 'Rating',
+                      child: Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: [4.5, 4.0, 3.5, 3.0].map((value) {
+                          final selected = minRating == value;
+                          return ChoiceChip(
+                            label: Text('$value+'),
+                            selected: selected,
+                            onSelected: (_) => setSheetState(() => minRating = selected ? null : value),
+                            selectedColor: const Color(0xFF74004A),
+                            backgroundColor: const Color(0xFF2A2A2A),
+                            labelStyle: const TextStyle(
+                              color: Colors.white,
+                              fontFamily: 'SF Compact Rounded',
+                            ),
+                            shape: StadiumBorder(
+                              side: BorderSide(
+                                color: selected ? const Color(0xFF74004A) : Colors.white38,
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    _FilterSection(
+                      title: 'Distance',
+                      child: Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: const [
+                          _DistanceOption(label: '0.5 mi', miles: 0.5),
+                          _DistanceOption(label: '1 mi', miles: 1),
+                          _DistanceOption(label: '5 mi', miles: 5),
+                          _DistanceOption(label: '10 mi', miles: 10),
+                        ].map((option) {
+                          final selected = maxDistance == option.miles;
+                          return ChoiceChip(
+                            label: Text(option.label),
+                            selected: selected,
+                            onSelected: (_) => setSheetState(() => maxDistance = selected ? null : option.miles),
+                            selectedColor: const Color(0xFF74004A),
+                            backgroundColor: const Color(0xFF2A2A2A),
+                            labelStyle: const TextStyle(
+                              color: Colors.white,
+                              fontFamily: 'SF Compact Rounded',
+                            ),
+                            shape: StadiumBorder(
+                              side: BorderSide(
+                                color: selected ? const Color(0xFF74004A) : Colors.white38,
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    _FilterSection(
+                      title: 'Minimum reviews',
+                      child: Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: [20, 50, 100, 500].map((value) {
+                          final selected = minReviews == value;
+                          return ChoiceChip(
+                            label: Text('$value+'),
+                            selected: selected,
+                            onSelected: (_) => setSheetState(() => minReviews = selected ? null : value),
+                            selectedColor: const Color(0xFF74004A),
+                            backgroundColor: const Color(0xFF2A2A2A),
+                            labelStyle: const TextStyle(
+                              color: Colors.white,
+                              fontFamily: 'SF Compact Rounded',
+                            ),
+                            shape: StadiumBorder(
+                              side: BorderSide(
+                                color: selected ? const Color(0xFF74004A) : Colors.white38,
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Open now',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontFamily: 'SF Compact Rounded',
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Switch(
+                          value: openNow,
+                          onChanged: (val) => setSheetState(() => openNow = val),
+                          activeColor: Colors.white,
+                          activeTrackColor: const Color(0xFF74004A),
+                          inactiveThumbColor: Colors.white70,
+                          inactiveTrackColor: Colors.white24,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () {
+                              setSheetState(() {
+                                minRating = null;
+                                maxDistance = null;
+                                minReviews = null;
+                                openNow = false;
+                              });
+                            },
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.white,
+                              side: const BorderSide(color: Colors.white24),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: const Text('Clear all'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              setState(() {
+                                _filters
+                                  ..minRating = minRating
+                                  ..maxDistanceMiles = maxDistance
+                                  ..minReviews = minReviews
+                                  ..openNow = openNow;
+                                final filtered = _filterPlaces(_allPlaces);
+                                _places = filtered;
+                                _error = null;
+                                if (_allPlaces.isEmpty) {
+                                  _error = 'No nearby spots found. Try another filter.';
+                                } else if (_places.isEmpty) {
+                                  _error = 'No matches found with current filters.';
+                                }
+                              });
+                              Navigator.of(context).pop();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF74004A),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: const Text('Apply filters'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  List<NearbyPlace> _filterPlaces(List<NearbyPlace> source) {
+    return source.where((place) {
+      if (_filters.minRating != null && (place.rating ?? 0) < _filters.minRating!) {
+        return false;
+      }
+      if (_filters.minReviews != null && (place.userRatingsTotal ?? 0) < _filters.minReviews!) {
+        return false;
+      }
+      if (_filters.openNow && place.isOpen != true) {
+        return false;
+      }
+      if (_filters.maxDistanceMeters != null) {
+        if (place.lat == null || place.lng == null) return false;
+        final distance = _locationService.distanceFrom(place.lat!, place.lng!);
+        if (distance == null || distance > _filters.maxDistanceMeters!) return false;
+      }
+      return true;
+    }).toList();
   }
 
   @override
@@ -184,10 +429,16 @@ class _DiscoverPageState extends State<DiscoverPage> {
           height: 40,
           width: 40,
           decoration: BoxDecoration(
-            color: const Color(0x33FFFFFF),
+            color: _filters.hasActive ? const Color(0xFF74004A) : const Color(0x33FFFFFF),
             borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white30),
           ),
-          child: const Icon(Icons.tune, color: Colors.white),
+          child: IconButton(
+            icon: const Icon(Icons.tune, color: Colors.white),
+            onPressed: _openFilters,
+            padding: EdgeInsets.zero,
+            tooltip: 'Filters',
+          ),
         ),
       ],
     );
@@ -789,3 +1040,64 @@ const List<String> _genericTypes = [
   'point_of_interest',
   'establishment',
 ];
+
+class _Filters {
+  double? minRating;
+  int? minReviews;
+  bool openNow = false;
+  double? maxDistanceMiles;
+
+  double? get maxDistanceMeters => maxDistanceMiles == null ? null : maxDistanceMiles! * 1609.344;
+
+  bool get hasActive =>
+      minRating != null || minReviews != null || openNow || maxDistanceMiles != null;
+
+  _Filters copy() {
+    return _Filters()
+      ..minRating = minRating
+      ..minReviews = minReviews
+      ..openNow = openNow
+      ..maxDistanceMiles = maxDistanceMiles;
+  }
+
+  void reset() {
+    minRating = null;
+    minReviews = null;
+    openNow = false;
+    maxDistanceMiles = null;
+  }
+}
+
+class _FilterSection extends StatelessWidget {
+  const _FilterSection({required this.title, required this.child});
+
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 15,
+            fontFamily: 'SF Compact Rounded',
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 10),
+        child,
+      ],
+    );
+  }
+}
+
+class _DistanceOption {
+  final String label;
+  final double miles;
+
+  const _DistanceOption({required this.label, required this.miles});
+}
