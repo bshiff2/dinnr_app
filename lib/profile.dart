@@ -52,6 +52,7 @@ class _ProfileState extends State<Profile> {
   List<FavoriteRestaurant> _favorites = [];
   int _favoriteCount = 0;
   bool _favoritesLoading = true;
+  bool _favoritesExpanded = false;
   Map<String, dynamic>? _userProfile;
 
   void _startAuthListener() {
@@ -480,8 +481,6 @@ class _ProfileState extends State<Profile> {
                   _buildFavoritesSection(),
                   const SizedBox(height: 20),
                   // Menu Items
-                  _buildMenuItem('Saved Addresses'),
-                  const SizedBox(height: 10),
                   _buildMenuItem('Settings'),
                   const SizedBox(height: 30),
                   // Delete Account Button (Temporary)
@@ -746,6 +745,15 @@ class _ProfileState extends State<Profile> {
                 ),
               ),
               const Spacer(),
+              IconButton(
+                onPressed: () => setState(() => _favoritesExpanded = !_favoritesExpanded),
+                icon: Icon(
+                  _favoritesExpanded ? Icons.expand_less : Icons.expand_more,
+                  color: Colors.white,
+                ),
+                tooltip: _favoritesExpanded ? 'Collapse' : 'Expand',
+              ),
+              const SizedBox(width: 4),
               if (_favoritesLoading)
                 const SizedBox(
                   height: 18,
@@ -761,7 +769,7 @@ class _ProfileState extends State<Profile> {
                     border: Border.all(color: Colors.white24),
                   ),
                   child: Text(
-                    '$_favoriteCount saved',
+                    ' saved',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 12,
@@ -775,6 +783,15 @@ class _ProfileState extends State<Profile> {
           const SizedBox(height: 12),
           if (_favoritesLoading)
             const SizedBox.shrink()
+          else if (!_favoritesExpanded)
+            const Text(
+              'Expand to view saved places.',
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 14,
+                fontFamily: 'SF Compact Rounded',
+              ),
+            )
           else if (_favorites.isEmpty)
             const Text(
               'Save a spot from Discover or Chat to see it here.',
@@ -887,7 +904,6 @@ class _ProfileState extends State<Profile> {
       ),
     );
   }
-
   Widget _buildStatCard(String value, String label) {
     return Container(
       width: 111.22,
