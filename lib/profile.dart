@@ -53,6 +53,10 @@ class _ProfileState extends State<Profile> {
   int _favoriteCount = 0;
   bool _favoritesLoading = true;
   bool _favoritesExpanded = false;
+  bool _settingsExpanded = false;
+  bool _notifyPush = true;
+  bool _notifyEmail = false;
+  bool _preferVeganFirst = false;
   Map<String, dynamic>? _userProfile;
 
   void _startAuthListener() {
@@ -480,8 +484,7 @@ class _ProfileState extends State<Profile> {
                   const SizedBox(height: 30),
                   _buildFavoritesSection(),
                   const SizedBox(height: 20),
-                  // Menu Items
-                  _buildMenuItem('Settings'),
+                  _buildSettingsSection(),
                   const SizedBox(height: 30),
                   // Delete Account Button (Temporary)
                   InkWell(
@@ -904,15 +907,147 @@ class _ProfileState extends State<Profile> {
       ),
     );
   }
+
+  Widget _buildSettingsSection() {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF1B1E2A), Color(0xFF121212)],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white12),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text(
+                'Settings',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontFamily: 'Arvo',
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const Spacer(),
+              IconButton(
+                onPressed: () => setState(() => _settingsExpanded = !_settingsExpanded),
+                icon: Icon(
+                  _settingsExpanded ? Icons.expand_less : Icons.expand_more,
+                  color: Colors.white,
+                ),
+                tooltip: _settingsExpanded ? 'Collapse' : 'Expand',
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (!_settingsExpanded)
+            const Text(
+              'Expand to adjust your preferences.',
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 14,
+                fontFamily: 'SF Compact Rounded',
+              ),
+            )
+          else
+            Column(
+              children: [
+                _settingsSwitch(
+                  title: 'Push notifications',
+                  subtitle: 'Get alerts for new recommendations and status updates.',
+                  value: _notifyPush,
+                  onChanged: (val) => setState(() => _notifyPush = val),
+                ),
+                const SizedBox(height: 8),
+                _settingsSwitch(
+                  title: 'Email updates',
+                  subtitle: 'Occasional roundups and tips sent to your inbox.',
+                  value: _notifyEmail,
+                  onChanged: (val) => setState(() => _notifyEmail = val),
+                ),
+                const SizedBox(height: 8),
+                _settingsSwitch(
+                  title: 'Vegan-friendly first',
+                  subtitle: 'Prioritize vegan options when available in Discover.',
+                  value: _preferVeganFirst,
+                  onChanged: (val) => setState(() => _preferVeganFirst = val),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _settingsSwitch({
+    required String title,
+    required String subtitle,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0x331E1E1E),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontFamily: 'SF Compact Rounded',
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                    fontFamily: 'SF Compact Rounded',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: value,
+            onChanged: onChanged,
+            activeColor: Colors.white,
+            activeTrackColor: const Color(0xFF74004A),
+            inactiveThumbColor: Colors.white70,
+            inactiveTrackColor: Colors.white24,
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildStatCard(String value, String label) {
     return Container(
       width: 111.22,
       height: 72.43,
       decoration: ShapeDecoration(
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           begin: Alignment(0.00, 0.50),
           end: Alignment(1.00, 0.50),
-          colors: [const Color(0x7F4C0041), const Color(0x7F4C0041)],
+          colors: [Color(0x7F4C0041), Color(0x7F4C0041)],
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(15),
@@ -924,7 +1059,7 @@ class _ProfileState extends State<Profile> {
           Text(
             value,
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 24,
               fontFamily: 'SF Compact Rounded',
@@ -935,55 +1070,14 @@ class _ProfileState extends State<Profile> {
           Text(
             label,
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: const Color(0xFFD4D4D4),
+            style: const TextStyle(
+              color: Color(0xFFD4D4D4),
               fontSize: 12,
               fontFamily: 'SF Compact Rounded',
               fontWeight: FontWeight.w400,
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildMenuItem(String title) {
-    return Container(
-      width: double.infinity,
-      height: 49.99,
-      decoration: ShapeDecoration(
-        gradient: LinearGradient(
-          begin: Alignment(0.00, 0.50),
-          end: Alignment(1.00, 0.50),
-          colors: [const Color(0xFF4C0041), const Color(0xFF4C0041)],
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Row(
-          children: [
-            Container(
-              width: 20,
-              height: 20,
-              child: Icon(Icons.star, color: Colors.white54, size: 18),
-            ),
-            const SizedBox(width: 15),
-            Text(
-              title,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontFamily: 'SF Compact Rounded',
-                fontWeight: FontWeight.w400,
-              ),
-            ),
-            const Spacer(),
-            Icon(Icons.chevron_right, color: Colors.white54, size: 20),
-          ],
-        ),
       ),
     );
   }
