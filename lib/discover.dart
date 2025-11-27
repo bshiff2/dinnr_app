@@ -16,6 +16,8 @@ class _DiscoverPageState extends State<DiscoverPage> {
   final LocationService _locationService = LocationService();
   final ConfigService _configService = ConfigService();
 
+  final TextEditingController _searchController = TextEditingController();
+
   final List<_CategoryFilter> _categories = const [
     _CategoryFilter('Nearby', null),
     _CategoryFilter('Trending', 'popular'),
@@ -29,11 +31,18 @@ class _DiscoverPageState extends State<DiscoverPage> {
   bool _loading = true;
   String? _error;
   List<NearbyPlace> _places = [];
+  bool _hasActiveSearch = false;
 
   @override
   void initState() {
     super.initState();
     _initialize();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _initialize() async {
@@ -80,9 +89,34 @@ class _DiscoverPageState extends State<DiscoverPage> {
   }
 
   void _onCategorySelected(int index) {
-    if (_selectedCategory == index) return;
-    setState(() => _selectedCategory = index);
+    final selectingSame = _selectedCategory == index;
+    if (selectingSame && !_hasActiveSearch) return;
+
+    setState(() {
+      _selectedCategory = index;
+      _hasActiveSearch = false;
+      _searchController.clear();
+    });
     _loadPlaces(keyword: _categories[index].keyword);
+  }
+
+  void _onSearchSubmitted(String value) {
+    final query = value.trim();
+    final keyword = query.isEmpty ? _categories[_selectedCategory].keyword : query;
+    FocusScope.of(context).unfocus();
+    setState(() => _hasActiveSearch = query.isNotEmpty);
+    _loadPlaces(keyword: keyword);
+  }
+
+  void _clearSearch() {
+    final hadActiveSearch = _hasActiveSearch;
+    _searchController.clear();
+    FocusScope.of(context).unfocus();
+    setState(() => _hasActiveSearch = false);
+
+    if (hadActiveSearch) {
+      _loadPlaces(keyword: _categories[_selectedCategory].keyword);
+    }
   }
 
   @override
@@ -104,7 +138,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
                 children: [
                   _buildHeader(),
                   const SizedBox(height: 20),
-                  _buildSearchHint(),
+                  _buildSearchBar(),
                   const SizedBox(height: 16),
                   _buildCategories(),
                   const SizedBox(height: 20),
@@ -159,28 +193,51 @@ class _DiscoverPageState extends State<DiscoverPage> {
     );
   }
 
-  Widget _buildSearchHint() {
+  Widget _buildSearchBar() {
     return Container(
       height: 52,
-      padding: const EdgeInsets.symmetric(horizontal: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
         color: const Color(0x33FFFFFF),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
-        children: const [
-          Icon(Icons.search, color: Colors.white70),
-          SizedBox(width: 10),
+        children: [
+          const Icon(Icons.search, color: Colors.white70),
+          const SizedBox(width: 10),
           Expanded(
-            child: Text(
-              'Search cuisine, mood, or place',
-              style: TextStyle(
-                color: Colors.white70,
+            child: TextField(
+              controller: _searchController,
+              onSubmitted: _onSearchSubmitted,
+              onChanged: (_) => setState(() {}),
+              textInputAction: TextInputAction.search,
+              style: const TextStyle(
+                color: Colors.white,
                 fontSize: 15,
                 fontFamily: 'SF Compact Rounded',
               ),
+              decoration: const InputDecoration(
+                hintText: 'Search cuisine, mood, or place',
+                hintStyle: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 15,
+                  fontFamily: 'SF Compact Rounded',
+                ),
+                border: InputBorder.none,
+                isCollapsed: true,
+              ),
             ),
           ),
+          if (_searchController.text.isNotEmpty || _hasActiveSearch)
+            IconButton(
+              onPressed: _clearSearch,
+              icon: const Icon(Icons.close, color: Colors.white70),
+            )
+          else
+            IconButton(
+              onPressed: () => _onSearchSubmitted(_searchController.text),
+              icon: const Icon(Icons.arrow_forward, color: Colors.white70),
+            ),
         ],
       ),
     );
