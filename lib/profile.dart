@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -5,6 +6,8 @@ import 'package:image_picker/image_picker.dart';
 import 'chatPage.dart';
 import 'home_page.dart';
 import 'login.dart';
+import 'services/config_service.dart';
+import 'services/favorite_service.dart';
 import 'services/user_service.dart';
 
 // Temporary main() for standalone testing - remove when integrating with main.dart
@@ -42,12 +45,57 @@ class Profile extends StatefulWidget {
 
 class _ProfileState extends State<Profile> {
   final _userService = UserService();
+  final _favoriteService = FavoriteService();
+  final _configService = ConfigService();
+  StreamSubscription<User?>? _authSub;
+  StreamSubscription<List<FavoriteRestaurant>>? _favoritesSub;
+  List<FavoriteRestaurant> _favorites = [];
+  int _favoriteCount = 0;
+  bool _favoritesLoading = true;
   Map<String, dynamic>? _userProfile;
+
+  void _startAuthListener() {
+    _authSub = FirebaseAuth.instance.authStateChanges().listen((user) {
+      _favoritesSub?.cancel();
+
+      if (user == null) {
+        if (!mounted) return;
+        setState(() {
+          _userProfile = null;
+          _favorites = [];
+          _favoriteCount = 0;
+          _favoritesLoading = false;
+        });
+        return;
+      }
+
+      _loadUserProfile();
+      setState(() {
+        _favoritesLoading = true;
+      });
+
+      _favoritesSub = _favoriteService.streamFavorites(user.uid).listen((items) {
+        if (!mounted) return;
+        setState(() {
+          _favorites = items;
+          _favoriteCount = items.length;
+          _favoritesLoading = false;
+        });
+      });
+    });
+  }
 
   @override
   void initState() {
     super.initState();
-    _loadUserProfile();
+    _startAuthListener();
+  }
+
+  @override
+  void dispose() {
+    _favoritesSub?.cancel();
+    _authSub?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadUserProfile() async {
@@ -424,14 +472,14 @@ class _ProfileState extends State<Profile> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       _buildStatCard('47', 'Orders'),
-                      _buildStatCard('12', 'Favorites'),
+                      _buildStatCard('$_favoriteCount', 'Favorites'),
                       _buildStatCard('8', 'Reviews'),
                     ],
                   ),
                   const SizedBox(height: 30),
+                  _buildFavoritesSection(),
+                  const SizedBox(height: 20),
                   // Menu Items
-                  _buildMenuItem('Favorite Places'),
-                  const SizedBox(height: 10),
                   _buildMenuItem('Saved Addresses'),
                   const SizedBox(height: 10),
                   _buildMenuItem('Settings'),
@@ -644,6 +692,198 @@ class _ProfileState extends State<Profile> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Future<void> _removeFavorite(String lookupKey) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      await _favoriteService.removeFavorite(user.uid, lookupKey);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Removed from favorites')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not remove favorite: $e')),
+      );
+    }
+  }
+
+  String? _favoriteImageUrl(FavoriteRestaurant favorite) {
+    return favorite.imageUrlForDisplay(_configService.googleApiKey);
+  }
+
+  Widget _buildFavoritesSection() {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF2A1426), Color(0xFF121212)],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white12),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text(
+                'Favorite Places',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontFamily: 'Arvo',
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const Spacer(),
+              if (_favoritesLoading)
+                const SizedBox(
+                  height: 18,
+                  width: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white10,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white24),
+                  ),
+                  child: Text(
+                    '$_favoriteCount saved',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontFamily: 'SF Compact Rounded',
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (_favoritesLoading)
+            const SizedBox.shrink()
+          else if (_favorites.isEmpty)
+            const Text(
+              'Save a spot from Discover or Chat to see it here.',
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 14,
+                fontFamily: 'SF Compact Rounded',
+              ),
+            )
+          else
+            Column(
+              children: _favorites.map((fav) => _favoriteTile(fav)).toList(),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _favoriteTile(FavoriteRestaurant favorite) {
+    final imageUrl = _favoriteImageUrl(favorite);
+    final meta = [
+      if (favorite.priceLabel != null) favorite.priceLabel!,
+      if (favorite.cuisine != null) favorite.cuisine!,
+    ].join(' - ');
+
+    return Container(
+      margin: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: const Color(0x331E1E1E),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: imageUrl != null
+                ? Image.network(
+                    imageUrl,
+                    width: 72,
+                    height: 72,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      width: 72,
+                      height: 72,
+                      color: const Color(0xFF2C2C2C),
+                      child: const Icon(Icons.restaurant, color: Colors.white38),
+                    ),
+                  )
+                : Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2C2C2C),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.restaurant, color: Colors.white38),
+                  ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  favorite.name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontFamily: 'SF Compact Rounded',
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                if (meta.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      meta,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13,
+                        fontFamily: 'SF Compact Rounded',
+                      ),
+                    ),
+                  ),
+                if (favorite.address != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      favorite.address!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white54,
+                        fontSize: 12,
+                        fontFamily: 'SF Compact Rounded',
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: () => _removeFavorite(favorite.lookupKey),
+            icon: const Icon(Icons.favorite, color: Colors.redAccent),
+            tooltip: 'Remove from favorites',
+          ),
+        ],
       ),
     );
   }

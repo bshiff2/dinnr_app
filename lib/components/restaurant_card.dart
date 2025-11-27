@@ -12,6 +12,8 @@ class RestaurantCard extends StatelessWidget {
     this.priceLevel,
     this.cuisineType,
     this.onTap,
+    this.onSave,
+    this.isSaved = false,
   });
 
   final String name;
@@ -22,6 +24,8 @@ class RestaurantCard extends StatelessWidget {
   final String? priceLevel; // "$", "$$", "$$$", "$$$$"
   final String? cuisineType;
   final VoidCallback? onTap;
+  final Future<void> Function()? onSave;
+  final bool isSaved;
 
   @override
   Widget build(BuildContext context) {
@@ -64,6 +68,23 @@ class RestaurantCard extends StatelessWidget {
                     },
                   ),
                 ),
+                if (onSave != null)
+                  Positioned(
+                    top: 10,
+                    right: 10,
+                    child: Material(
+                      color: Colors.black54,
+                      shape: const CircleBorder(),
+                      child: IconButton(
+                        icon: Icon(
+                          isSaved ? Icons.favorite : Icons.favorite_border,
+                          color: isSaved ? Colors.redAccent : Colors.white,
+                        ),
+                        onPressed: () => onSave?.call(),
+                        tooltip: isSaved ? 'Saved' : 'Save',
+                      ),
+                    ),
+                  ),
                 // Bottom label with restaurant name
                 Positioned(
                   bottom: 0,
@@ -182,6 +203,8 @@ class RestaurantCard extends StatelessWidget {
         rating: rating,
         priceLevel: priceLevel,
         cuisineType: cuisineType,
+        onSave: onSave,
+        isSaved: isSaved,
       ),
     );
   }
@@ -197,6 +220,8 @@ class _RestaurantDetailsSheet extends StatelessWidget {
     this.rating,
     this.priceLevel,
     this.cuisineType,
+    this.onSave,
+    this.isSaved = false,
   });
 
   final String name;
@@ -206,6 +231,8 @@ class _RestaurantDetailsSheet extends StatelessWidget {
   final double? rating;
   final String? priceLevel;
   final String? cuisineType;
+  final Future<void> Function()? onSave;
+  final bool isSaved;
 
   @override
   Widget build(BuildContext context) {
@@ -381,17 +408,18 @@ class _RestaurantDetailsSheet extends StatelessWidget {
                         const SizedBox(width: 12),
                         Expanded(
                           child: OutlinedButton.icon(
-                            onPressed: () {
-                              // TODO: Implement save
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Saved to favorites!')),
-                              );
-                            },
-                            icon: const Icon(Icons.favorite_border),
-                            label: const Text('Save'),
+                            onPressed: onSave == null || isSaved
+                                ? null
+                                : () async {
+                                    await onSave?.call();
+                                  },
+                            icon: Icon(isSaved ? Icons.favorite : Icons.favorite_border),
+                            label: Text(isSaved ? 'Saved' : 'Save'),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: Colors.white,
-                              side: const BorderSide(color: Colors.white24),
+                              side: BorderSide(
+                                color: isSaved ? Colors.redAccent : Colors.white24,
+                              ),
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),

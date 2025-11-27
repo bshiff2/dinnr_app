@@ -1,9 +1,12 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'page_layout.dart';
 import 'services/config_service.dart';
 import 'services/location_service.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'services/favorite_service.dart';
 
 class DiscoverPage extends StatefulWidget {
   const DiscoverPage({super.key});
@@ -15,6 +18,7 @@ class DiscoverPage extends StatefulWidget {
 class _DiscoverPageState extends State<DiscoverPage> {
   final LocationService _locationService = LocationService();
   final ConfigService _configService = ConfigService();
+  final FavoriteService _favoriteService = FavoriteService();
 
   final TextEditingController _searchController = TextEditingController();
   final _Filters _filters = _Filters();
@@ -33,17 +37,127 @@ class _DiscoverPageState extends State<DiscoverPage> {
   List<NearbyPlace> _places = [];
   List<NearbyPlace> _allPlaces = [];
   bool _hasActiveSearch = false;
+  StreamSubscription<User?>? _authSub;
+  StreamSubscription<List<FavoriteRestaurant>>? _favoritesSub;
+  Set<String> _favoriteKeys = {};
 
   @override
   void initState() {
     super.initState();
+    _initAuthListener();
     _initialize();
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _favoritesSub?.cancel();
+    _authSub?.cancel();
     super.dispose();
+  }
+
+  void _initAuthListener() {
+    _authSub = FirebaseAuth.instance.authStateChanges().listen((user) {
+      _favoritesSub?.cancel();
+      if (!mounted) return;
+
+      setState(() {
+        _favoriteKeys = {};
+      });
+
+      if (user != null) {
+        _favoritesSub = _favoriteService.streamFavorites(user.uid).listen((favorites) {
+          if (!mounted) return;
+          setState(() {
+            _favoriteKeys = favorites.map((f) => f.lookupKey).toSet();
+          });
+        });
+      }
+    });
+  }
+
+  String _favoriteKeyFor(NearbyPlace place) {
+    return FavoriteRestaurant.buildLookupKey(
+      placeId: place.placeId,
+      name: place.name,
+      address: place.address,
+    );
+  }
+
+  String? _primaryCuisine(NearbyPlace place) {
+    final filtered = place.types.where((t) => !_genericTypes.contains(t)).toList();
+    if (filtered.isEmpty) return null;
+    final primary = filtered.first.replaceAll('_', ' ');
+    return _titleCase(primary);
+  }
+
+  String _titleCase(String value) {
+    if (value.isEmpty) return value;
+    return value
+        .split(' ')
+        .map((word) => word.isEmpty ? word : '${word[0].toUpperCase()}${word.substring(1)}')
+        .join(' ');
+  }
+
+  User? _requireLogin() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Log in to save favorites.'),
+          action: SnackBarAction(
+            label: 'Log in',
+            onPressed: () => Navigator.pushNamed(context, '/login'),
+          ),
+        ),
+      );
+    }
+    return user;
+  }
+
+  Future<void> _savePlace(NearbyPlace place) async {
+    final user = _requireLogin();
+    if (user == null) return;
+
+    final key = _favoriteKeyFor(place);
+    if (_favoriteKeys.contains(key)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Already saved to favorites.')),
+        );
+      }
+      return;
+    }
+
+    final favorite = FavoriteRestaurant(
+      lookupKey: key,
+      name: place.name,
+      description: 'Saved from Discover',
+      imageUrl: null,
+      photoReference: place.photoReference,
+      address: place.address,
+      rating: place.rating,
+      priceLabel: _locationService.priceLabel(place.priceLevel),
+      cuisine: _primaryCuisine(place),
+      placeId: place.placeId,
+      source: 'discover',
+    );
+
+    try {
+      await _favoriteService.saveFavorite(user.uid, favorite);
+      if (!mounted) return;
+      setState(() {
+        _favoriteKeys.add(key);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Saved to favorites')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not save: $e')),
+      );
+    }
   }
 
   Future<void> _initialize() async {
@@ -535,21 +649,22 @@ class _DiscoverPageState extends State<DiscoverPage> {
 
     final apiKey = _configService.googleApiKey;
     return Column(
-      children: _places
-          .map(
-            (place) => Padding(
-              padding: const EdgeInsets.only(bottom: 14),
-              child: _DiscoverCard(
-                place: place,
-                distanceMeters: (place.lat != null && place.lng != null)
-                    ? _locationService.distanceFrom(place.lat!, place.lng!)
-                    : null,
-                priceLabel: _locationService.priceLabel(place.priceLevel),
-                apiKey: apiKey,
-              ),
-            ),
-          )
-          .toList(),
+      children: _places.map((place) {
+        final favoriteKey = _favoriteKeyFor(place);
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 14),
+          child: _DiscoverCard(
+            place: place,
+            distanceMeters: (place.lat != null && place.lng != null)
+                ? _locationService.distanceFrom(place.lat!, place.lng!)
+                : null,
+            priceLabel: _locationService.priceLabel(place.priceLevel),
+            apiKey: apiKey,
+            onSave: () => _savePlace(place),
+            isSaved: _favoriteKeys.contains(favoriteKey),
+          ),
+        );
+      }).toList(),
     );
   }
 }
@@ -588,6 +703,8 @@ class _CategoryChip extends StatelessWidget {
   }
 }
 
+
+
 class _DiscoverCard extends StatelessWidget {
   const _DiscoverCard({
     required this.place,
@@ -595,6 +712,8 @@ class _DiscoverCard extends StatelessWidget {
     required this.apiKey,
     this.distanceMeters,
     this.onTap,
+    this.onSave,
+    this.isSaved = false,
   });
 
   final NearbyPlace place;
@@ -602,9 +721,11 @@ class _DiscoverCard extends StatelessWidget {
   final double? distanceMeters;
   final String? apiKey;
   final VoidCallback? onTap;
+  final Future<void> Function()? onSave;
+  final bool isSaved;
 
   String _distanceLabel() {
-    if (distanceMeters == null) return '—';
+    if (distanceMeters == null) return 'N/A';
     final miles = distanceMeters! / 1609.344;
     if (miles < 0.1) {
       return '${distanceMeters!.toInt()} m';
@@ -616,7 +737,7 @@ class _DiscoverCard extends StatelessWidget {
     final filtered = place.types.where((t) => !_genericTypes.contains(t)).toList();
     if (filtered.isEmpty) return 'Restaurant';
     final primary = filtered.first.replaceAll('_', ' ');
-    return '${priceLabel} • ${_titleCase(primary)}';
+    return '$priceLabel - ${_titleCase(primary)}';
   }
 
   @override
@@ -631,141 +752,165 @@ class _DiscoverCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap ?? () => _showDetailsSheet(context, photoUrl),
       child: Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: const Color(0xCC1E1E1E),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x1AFFFFFF)),
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black54,
-            blurRadius: 16,
-            offset: Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            height: 160,
-            decoration: BoxDecoration(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
-              image: DecorationImage(
-                image: imageProvider,
-                fit: BoxFit.cover,
-              ),
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: const Color(0xCC1E1E1E),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0x1AFFFFFF)),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black54,
+              blurRadius: 16,
+              offset: Offset(0, 10),
             ),
-            child: Container(
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              height: 160,
               decoration: BoxDecoration(
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black.withOpacity(0.1),
-                    Colors.black.withOpacity(0.55),
-                  ],
+                image: DecorationImage(
+                  image: imageProvider,
+                  fit: BoxFit.cover,
                 ),
               ),
-              padding: const EdgeInsets.all(12),
-              alignment: Alignment.bottomLeft,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        place.name,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontFamily: 'Arvo',
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _cuisineLabel(),
-                        style: const TextStyle(
-                          color: Color(0xFFE0E0E0),
-                          fontSize: 13,
-                          fontFamily: 'SF Compact Rounded',
-                        ),
-                      ),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withOpacity(0.1),
+                      Colors.black.withOpacity(0.55),
                     ],
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.5),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
+                ),
+                padding: const EdgeInsets.all(12),
+                alignment: Alignment.bottomLeft,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.star, color: Colors.amber, size: 16),
-                        const SizedBox(width: 4),
                         Text(
-                          place.rating?.toStringAsFixed(1) ?? '—',
+                          place.name,
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 14,
-                            fontFamily: 'SF Compact Rounded',
+                            fontSize: 18,
+                            fontFamily: 'Arvo',
                             fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _cuisineLabel(),
+                          style: const TextStyle(
+                            color: Color(0xFFE0E0E0),
+                            fontSize: 13,
+                            fontFamily: 'SF Compact Rounded',
                           ),
                         ),
                       ],
                     ),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.5),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.star, color: Colors.amber, size: 16),
+                              const SizedBox(width: 4),
+                              Text(
+                                place.rating?.toStringAsFixed(1) ?? 'N/A',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontFamily: 'SF Compact Rounded',
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        if (onSave != null)
+                          InkWell(
+                            onTap: () => onSave?.call(),
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.55),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: isSaved ? Colors.redAccent : Colors.white30,
+                                ),
+                              ),
+                              child: Icon(
+                                isSaved ? Icons.favorite : Icons.favorite_border,
+                                color: isSaved ? Colors.redAccent : Colors.white,
+                                size: 16,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    place.address,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontFamily: 'SF Compact Rounded',
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      const Icon(Icons.place, color: Colors.white54, size: 18),
+                      const SizedBox(width: 6),
+                      Text(
+                        _distanceLabel(),
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 13,
+                          fontFamily: 'SF Compact Rounded',
+                        ),
+                      ),
+                      const Spacer(),
+                      if (place.userRatingsTotal != null)
+                        Text(
+                          '${place.userRatingsTotal} reviews',
+                          style: const TextStyle(
+                            color: Colors.white54,
+                            fontSize: 12,
+                            fontFamily: 'SF Compact Rounded',
+                          ),
+                        ),
+                    ],
                   ),
                 ],
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  place.address,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontFamily: 'SF Compact Rounded',
-                    height: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    const Icon(Icons.place, color: Colors.white54, size: 18),
-                    const SizedBox(width: 6),
-                    Text(
-                      _distanceLabel(),
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 13,
-                        fontFamily: 'SF Compact Rounded',
-                      ),
-                    ),
-                    const Spacer(),
-                    if (place.userRatingsTotal != null)
-                      Text(
-                        '${place.userRatingsTotal} reviews',
-                        style: const TextStyle(
-                          color: Colors.white54,
-                          fontSize: 12,
-                          fontFamily: 'SF Compact Rounded',
-                        ),
-                      ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }
@@ -851,7 +996,7 @@ class _DiscoverCard extends StatelessWidget {
                         spacing: 10,
                         runSpacing: 8,
                         children: [
-                          _infoChip(Icons.star, place.rating?.toStringAsFixed(1) ?? '�?"'),
+                          _infoChip(Icons.star, place.rating?.toStringAsFixed(1) ?? 'N/A'),
                           _infoChip(Icons.attach_money, priceLabel.isEmpty ? '\$' : priceLabel),
                           if (place.userRatingsTotal != null)
                             _infoChip(Icons.people, '${place.userRatingsTotal} reviews'),
@@ -859,6 +1004,23 @@ class _DiscoverCard extends StatelessWidget {
                           _infoChip(Icons.place, _distanceLabel()),
                         ],
                       ),
+                      if (onSave != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: OutlinedButton.icon(
+                            onPressed: isSaved ? null : () => onSave?.call(),
+                            icon: Icon(isSaved ? Icons.favorite : Icons.favorite_border),
+                            label: Text(isSaved ? 'Saved' : 'Save to favorites'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.white,
+                              side: BorderSide(
+                                color: isSaved ? Colors.redAccent : Colors.white24,
+                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                          ),
+                        ),
                       const SizedBox(height: 14),
                       if (place.address.isNotEmpty)
                         Row(
@@ -997,8 +1159,8 @@ class _DiscoverCard extends StatelessWidget {
       );
     }
   }
-
 }
+
 
 class _MessageCard extends StatelessWidget {
   const _MessageCard({required this.message});
