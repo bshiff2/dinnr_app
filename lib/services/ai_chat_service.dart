@@ -1,7 +1,5 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
 import 'package:audioplayers/audioplayers.dart';
 
 /// ─────────────────────────────────────────────────────────────────────────────
@@ -326,11 +324,10 @@ Note: For imageUrl, use relevant Unsplash URLs like:
         return;
       }
 
-      final tempDir = await getTemporaryDirectory();
-      final audioFile = File('${tempDir.path}/tts_response.mp3');
-      await audioFile.writeAsBytes(response.bodyBytes);
-      
-      await _audioPlayer.play(DeviceFileSource(audioFile.path));
+      // Use in-memory bytes so web (Chrome) and mobile share the same playback path
+      final audioSource = BytesSource(response.bodyBytes);
+      await _audioPlayer.stop(); // clear any existing playback before starting
+      await _audioPlayer.play(audioSource);
     } catch (e) {
       print('TTS Error: $e');
     }

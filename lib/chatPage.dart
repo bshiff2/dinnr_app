@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:firebase_auth/firebase_auth.dart';
 
 import 'home_page.dart';
 import 'page_layout.dart';
@@ -7,6 +9,7 @@ import 'profile.dart';
 import 'services/ai_chat_service.dart';
 import 'services/config_service.dart';
 import 'services/location_service.dart';
+import 'services/favorite_service.dart';
 import 'components/restaurant_card.dart';
 
 // Temporary main() for standalone testing - remove when integrating with main.dart
@@ -48,6 +51,10 @@ class _ChatOngoingState extends State<ChatOngoing> {
 
   late final AIChatService _aiService;
   late final LocationService _locationService;
+  final FavoriteService _favoriteService = FavoriteService();
+  StreamSubscription<User?>? _authSub;
+  StreamSubscription<List<FavoriteRestaurant>>? _favoritesSub;
+  Set<String> _favoriteKeys = {};
   bool _isSending = false;
   bool _isAudioMode = false; // Track if user used voice input
   String? _locationContext; // Cached location context
@@ -72,6 +79,7 @@ class _ChatOngoingState extends State<ChatOngoing> {
     _speech = stt.SpeechToText();
     _initSpeech();
     _initLocation();
+    _initAuthListener();
   }
 
   void _initLocation() async {
@@ -80,7 +88,27 @@ class _ChatOngoingState extends State<ChatOngoing> {
     print('Location context: $_locationContext');
   }
 
-  void _initSpeech() async {
+  void _initAuthListener() {
+    _authSub = FirebaseAuth.instance.authStateChanges().listen((user) {
+      _favoritesSub?.cancel();
+      if (!mounted) return;
+
+      setState(() {
+        _favoriteKeys = {};
+      });
+
+      if (user != null) {
+        _favoritesSub = _favoriteService.streamFavorites(user.uid).listen((favorites) {
+          if (!mounted) return;
+          setState(() {
+            _favoriteKeys = favorites.map((f) => f.lookupKey).toSet();
+          });
+        });
+      }
+    });
+  }
+
+  Future<void> _initSpeech() async {
     _speechAvailable = await _speech.initialize(
       onStatus: (status) {
         if (status == 'done' && _isListening) {
@@ -89,14 +117,23 @@ class _ChatOngoingState extends State<ChatOngoing> {
         }
       },
       onError: (error) {
-        setState(() => _isListening = false);
+        setState(() {
+          _isListening = false;
+        });
+        _showMicError('Mic error: ${error.errorMsg}');
       },
     );
+    if (!_speechAvailable) {
+      _showMicError('Microphone permission is needed for voice input. Please enable it in Settings.');
+    }
     setState(() {});
   }
 
   void _startListening() async {
-    if (!_speechAvailable) return;
+    if (!_speechAvailable) {
+      await _initSpeech(); // Try to reinitialize to prompt permission again
+      if (!_speechAvailable) return;
+    }
 
     setState(() {
       _isListening = true;
@@ -119,6 +156,81 @@ class _ChatOngoingState extends State<ChatOngoing> {
   void _stopListening() async {
     await _speech.stop();
     setState(() => _isListening = false);
+  }
+
+  void _showMicError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  String _favoriteKeyFor(RestaurantData data) {
+    return FavoriteRestaurant.buildLookupKey(
+      placeId: data.placeId,
+      name: data.name,
+      address: data.address,
+    );
+  }
+
+  User? _requireLogin() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Log in to save favorites.'),
+          action: SnackBarAction(
+            label: 'Log in',
+            onPressed: () => Navigator.pushNamed(context, '/login'),
+          ),
+        ),
+      );
+    }
+    return user;
+  }
+
+  Future<void> _saveRestaurantFromChat(RestaurantData data) async {
+    final user = _requireLogin();
+    if (user == null) return;
+
+    final key = _favoriteKeyFor(data);
+    if (_favoriteKeys.contains(key)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Already saved to favorites.')),
+        );
+      }
+      return;
+    }
+
+    final favorite = FavoriteRestaurant(
+      lookupKey: key,
+      name: data.name,
+      description: data.description,
+      imageUrl: data.imageUrl,
+      address: data.address,
+      rating: data.rating,
+      priceLabel: data.priceLevel,
+      cuisine: data.cuisineType,
+      placeId: data.placeId,
+      source: 'chat',
+    );
+
+    try {
+      await _favoriteService.saveFavorite(user.uid, favorite);
+      if (!mounted) return;
+      setState(() {
+        _favoriteKeys.add(key);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Saved to favorites')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not save: $e')),
+      );
+    }
   }
 
   Future<void> _sendMessage({bool useAudio = false}) async {
@@ -207,6 +319,8 @@ class _ChatOngoingState extends State<ChatOngoing> {
     _controller.dispose();
     _scrollController.dispose();
     _speech.cancel();
+    _favoritesSub?.cancel();
+    _authSub?.cancel();
     _aiService.dispose();
     super.dispose();
   }
@@ -287,14 +401,22 @@ class _ChatOngoingState extends State<ChatOngoing> {
                                   if (msg.restaurantData != null)
                                     Padding(
                                       padding: const EdgeInsets.only(top: 8),
-                                      child: RestaurantCard(
-                                        name: msg.restaurantData!.name,
-                                        description: msg.restaurantData!.description,
-                                        imageUrl: msg.restaurantData!.imageUrl,
-                                        address: msg.restaurantData!.address,
-                                        rating: msg.restaurantData!.rating,
-                                        priceLevel: msg.restaurantData!.priceLevel,
-                                        cuisineType: msg.restaurantData!.cuisineType,
+                                      child: Builder(
+                                        builder: (context) {
+                                          final restaurant = msg.restaurantData!;
+                                          final favoriteKey = _favoriteKeyFor(restaurant);
+                                          return RestaurantCard(
+                                            name: restaurant.name,
+                                            description: restaurant.description,
+                                            imageUrl: restaurant.imageUrl,
+                                            address: restaurant.address,
+                                            rating: restaurant.rating,
+                                            priceLevel: restaurant.priceLevel,
+                                            cuisineType: restaurant.cuisineType,
+                                            onSave: () => _saveRestaurantFromChat(restaurant),
+                                            isSaved: _favoriteKeys.contains(favoriteKey),
+                                          );
+                                        },
                                       ),
                                     ),
                                 ],
@@ -486,6 +608,7 @@ class RestaurantData {
     this.rating,
     this.priceLevel,
     this.cuisineType,
+    this.placeId,
   });
 
   final String name;
@@ -495,6 +618,7 @@ class RestaurantData {
   final double? rating;
   final String? priceLevel;
   final String? cuisineType;
+  final String? placeId;
 
   factory RestaurantData.fromJson(Map<String, dynamic> json) {
     return RestaurantData(
@@ -505,6 +629,7 @@ class RestaurantData {
       rating: json['rating'] != null ? (json['rating'] as num).toDouble() : null,
       priceLevel: json['priceLevel'] as String?,
       cuisineType: json['cuisineType'] as String?,
+      placeId: json['placeId'] as String?,
     );
   }
 }
