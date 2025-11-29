@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 //Imports done for testing traversal. Once integrated with main.dart, remove page imports.
 import 'chatPage.dart';
 import 'profile.dart';
+import 'discover.dart';
 
 // Temporary main() for page testing - remove when done for integration w/ main.dart
 void main() {
@@ -24,12 +25,40 @@ class TestApp extends StatelessWidget {
         //Testing traversal buttons.
         '/chat': (context) => ChatOngoing(),
         '/profile': (context) => Profile(),
+        '/discover': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments as DiscoverPageArguments?;
+          return DiscoverPage(
+            initialQuery: args?.initialQuery,
+            initialCategoryIndex: args?.initialCategoryIndex,
+          );
+        },
       },
     );
   }
 }
 
 class HomePageUI extends StatelessWidget {
+  HomePageUI({super.key});
+
+  static const List<_HomeSearchOption> _searchOptions = [
+    _HomeSearchOption(
+      label: 'Show me nearby',
+      categoryIndex: 0, // Nearby tab
+    ),
+    _HomeSearchOption(
+      label: 'What\'s trending',
+      categoryIndex: 1, // Trending tab
+    ),
+    _HomeSearchOption(
+      label: 'Give me something fast and easy',
+      categoryIndex: 3, // Quick bites tab
+    ),
+    _HomeSearchOption(
+      label: 'Family-friendly spots',
+      categoryIndex: 4, // Family tab
+    ),
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Material(
@@ -53,6 +82,7 @@ class HomePageUI extends StatelessWidget {
               bottom: 0,
               child: Center(
                 child: Container(
+                  padding: const EdgeInsets.only(bottom: 100), // shift content up so "or" sits above arrow
                   width: double.infinity,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -99,24 +129,61 @@ class HomePageUI extends StatelessWidget {
                           runAlignment: WrapAlignment.center,
                           spacing: 10,
                           runSpacing: 10,
-                          children: [
-                            _buildChip('I\'m hungry for a pizza'),
-                            _buildChip('I want Chinese food'),
-                            _buildChip('Give me something fast and easy'),
-                            _buildChip('I want to sit down'),
-                          ],
+                          children: _searchOptions
+                              .map((option) => _buildChip(context, option))
+                              .toList(),
                         ),
                       ),
-                      // Arrow positioned responsively below the chips so that it hopefully appears correctly on IOS
-                      //May need further adjustment
-                      SizedBox(height: 80), // Space between chips and arrow
-                      Image.asset(
-                        'lib/assets/icons/HomeArrow.png',
-                        width: 100,
-                        height: 150,
+                      const SizedBox(height: 4),
+                      const Text(
+                        'or',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 40,
+                          fontFamily: 'Arvo',
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
+                      const SizedBox(height: 12),
                     ],
                   ),
+                ),
+              ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 200,
+              child: Center(
+                child: Image.asset(
+                  'lib/assets/icons/HomeArrow.png',
+                  width: 100,
+                  height: 150,
+                ),
+              ),
+            ),
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 110, // sits above navbar
+              child: SafeArea(
+                top: false,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pushNamedAndRemoveUntil('/chat', (route) => false);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF74004A),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    textStyle: const TextStyle(
+                      fontSize: 18,
+                      fontFamily: 'Arvo',
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  child: const Text('Ask Dinnr!'),
                 ),
               ),
             ),
@@ -126,25 +193,51 @@ class HomePageUI extends StatelessWidget {
     );
   }
 
-  Widget _buildChip(String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: ShapeDecoration(
-        color: const Color(0xFF4B0040),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(68.28),
+  Widget _buildChip(BuildContext context, _HomeSearchOption option) {
+    return GestureDetector(
+      onTap: () => _handleChipTap(context, option),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: ShapeDecoration(
+          color: const Color(0xFF4B0040),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(68.28),
+          ),
         ),
-      ),
-      child: Text(
-        text,
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 13,
-          fontFamily: 'SF Compact Rounded',
-          fontWeight: FontWeight.w400,
+        child: Text(
+          option.label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 13,
+            fontFamily: 'SF Compact Rounded',
+            fontWeight: FontWeight.w400,
+          ),
         ),
       ),
     );
   }
+
+  void _handleChipTap(BuildContext context, _HomeSearchOption option) {
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      '/discover',
+      (route) => false,
+      arguments: DiscoverPageArguments(
+        initialQuery: option.query,
+        initialCategoryIndex: option.categoryIndex,
+      ),
+    );
+  }
+}
+
+class _HomeSearchOption {
+  final String label;
+  final String? query;
+  final int? categoryIndex;
+
+  const _HomeSearchOption({
+    required this.label,
+    this.query,
+    this.categoryIndex,
+  });
 }

@@ -8,8 +8,18 @@ import 'services/config_service.dart';
 import 'services/location_service.dart';
 import 'services/favorite_service.dart';
 
+class DiscoverPageArguments {
+  final String? initialQuery;
+  final int? initialCategoryIndex;
+
+  const DiscoverPageArguments({this.initialQuery, this.initialCategoryIndex});
+}
+
 class DiscoverPage extends StatefulWidget {
-  const DiscoverPage({super.key});
+  final String? initialQuery;
+  final int? initialCategoryIndex;
+
+  const DiscoverPage({super.key, this.initialQuery, this.initialCategoryIndex});
 
   @override
   State<DiscoverPage> createState() => _DiscoverPageState();
@@ -45,6 +55,16 @@ class _DiscoverPageState extends State<DiscoverPage> {
   void initState() {
     super.initState();
     _initAuthListener();
+    if (widget.initialCategoryIndex != null &&
+        widget.initialCategoryIndex! >= 0 &&
+        widget.initialCategoryIndex! < _categories.length) {
+      _selectedCategory = widget.initialCategoryIndex!;
+    }
+    final presetQuery = widget.initialQuery?.trim();
+    if (presetQuery != null && presetQuery.isNotEmpty) {
+      _searchController.text = presetQuery;
+      _hasActiveSearch = true;
+    }
     _initialize();
   }
 
@@ -170,7 +190,10 @@ class _DiscoverPageState extends State<DiscoverPage> {
       return;
     }
     _locationService.setApiKey(key);
-    await _loadPlaces(keyword: _categories[_selectedCategory].keyword);
+    final initialKeyword = _hasActiveSearch && _searchController.text.trim().isNotEmpty
+        ? _searchController.text.trim()
+        : _categories[_selectedCategory].keyword;
+    await _loadPlaces(keyword: initialKeyword);
   }
 
   Future<void> _loadPlaces({String? keyword}) async {
