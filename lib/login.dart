@@ -382,11 +382,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Container(
                       height: 50,
                       decoration: ShapeDecoration(
-                        gradient: const LinearGradient(
-                          begin: Alignment(0.00, 0.50),
-                          end: Alignment(1.00, 0.50),
-                          colors: [Color(0xFF74004A), Color(0xFF197400)],
-                        ),
+                        color: Color(0xFF74004A),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),
                         ),
