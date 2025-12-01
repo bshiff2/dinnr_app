@@ -1,6 +1,6 @@
-# dinnr_app
-
-A new Flutter project.
+# Dinnr
+## Members:
+Beau Fontenot, Jerrold Walker, Daniel Liu, John Bellamy, Bryce Shifflett
 
 ## Getting Started
 
