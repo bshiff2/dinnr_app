@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'home_page.dart';
 import 'page_layout.dart';
 import 'profile.dart';
+import 'voice_mode_page.dart';
 import 'services/ai_chat_service.dart';
 import 'services/config_service.dart';
 import 'services/location_service.dart';
@@ -59,10 +59,6 @@ class _ChatOngoingState extends State<ChatOngoing> {
   bool _isAudioMode = false; // Track if user used voice input
   String? _locationContext; // Cached location context
 
-  late stt.SpeechToText _speech;
-  bool _isListening = false;
-  bool _speechAvailable = false;
-
   @override
   void initState() {
     super.initState();
@@ -76,8 +72,6 @@ class _ChatOngoingState extends State<ChatOngoing> {
     if (config.googleApiKey != null) {
       _locationService.setApiKey(config.googleApiKey!);
     }
-    _speech = stt.SpeechToText();
-    _initSpeech();
     _initLocation();
     _initAuthListener();
   }
@@ -108,60 +102,19 @@ class _ChatOngoingState extends State<ChatOngoing> {
     });
   }
 
-  Future<void> _initSpeech() async {
-    _speechAvailable = await _speech.initialize(
-      onStatus: (status) {
-        if (status == 'done' && _isListening) {
-          setState(() => _isListening = false);
-          _sendMessage(useAudio: true); // Use audio mode when voice input ends
-        }
-      },
-      onError: (error) {
-        setState(() {
-          _isListening = false;
-        });
-        _showMicError('Mic error: ${error.errorMsg}');
-      },
-    );
-    if (!_speechAvailable) {
-      _showMicError('Microphone permission is needed for voice input. Please enable it in Settings.');
-    }
-    setState(() {});
-  }
-
-  void _startListening() async {
-    if (!_speechAvailable) {
-      await _initSpeech(); // Try to reinitialize to prompt permission again
-      if (!_speechAvailable) return;
-    }
-
-    setState(() {
-      _isListening = true;
-      _isAudioMode = true; // Mark as audio mode
-    });
-    _controller.clear();
-
-    await _speech.listen(
-      onResult: (result) {
-        setState(() {
-          _controller.text = result.recognizedWords;
-        });
-      },
-      listenFor: const Duration(seconds: 30),
-      pauseFor: const Duration(seconds: 3),
-      cancelOnError: true,
-    );
-  }
-
-  void _stopListening() async {
-    await _speech.stop();
-    setState(() => _isListening = false);
-  }
-
-  void _showMicError(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
+  void _openVoiceMode() {
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => const VoiceModePage(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: animation,
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+      ),
     );
   }
 
@@ -257,11 +210,30 @@ class _ChatOngoingState extends State<ChatOngoing> {
         .toList();
 
     try {
+      // Fetch nearby restaurants for better recommendations
+      final lowerText = text.toLowerCase();
+      String? cuisineKeyword;
+      if (lowerText.contains('pizza')) cuisineKeyword = 'pizza';
+      else if (lowerText.contains('burger')) cuisineKeyword = 'burger';
+      else if (lowerText.contains('sushi') || lowerText.contains('japanese')) cuisineKeyword = 'sushi';
+      else if (lowerText.contains('mexican') || lowerText.contains('taco')) cuisineKeyword = 'mexican';
+      else if (lowerText.contains('chinese')) cuisineKeyword = 'chinese';
+      else if (lowerText.contains('italian') || lowerText.contains('pasta')) cuisineKeyword = 'italian';
+      else if (lowerText.contains('thai')) cuisineKeyword = 'thai';
+      else if (lowerText.contains('indian')) cuisineKeyword = 'indian';
+      else if (lowerText.contains('bbq') || lowerText.contains('barbecue')) cuisineKeyword = 'bbq';
+      
+      final nearbyPlaces = await _locationService.searchNearbyRestaurants(
+        keyword: cuisineKeyword,
+        radius: 5000,
+      );
+      
       final response = await _aiService.sendMessage(
         message: text,
         history: history,
         useAudio: shouldUseAudio,
         locationContext: _locationContext,
+        nearbyPlaces: nearbyPlaces,
       );
 
       if (mounted) {
@@ -318,7 +290,6 @@ class _ChatOngoingState extends State<ChatOngoing> {
   void dispose() {
     _controller.dispose();
     _scrollController.dispose();
-    _speech.cancel();
     _favoritesSub?.cancel();
     _authSub?.cancel();
     _aiService.dispose();
@@ -462,10 +433,10 @@ class _ChatOngoingState extends State<ChatOngoing> {
                       ),
                     ),
                     IconButton(
-                      onPressed: _isListening ? _stopListening : _startListening,
-                      icon: Icon(
-                        _isListening ? Icons.mic : Icons.mic_none,
-                        color: _isListening ? Colors.red : Colors.white70,
+                      onPressed: _openVoiceMode,
+                      icon: const Icon(
+                        Icons.mic_none,
+                        color: Colors.white70,
                       ),
                     ),
                     IconButton(

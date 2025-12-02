@@ -1,6 +1,10 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:audioplayers/audioplayers.dart';
+import 'package:path_provider/path_provider.dart';
+
+import 'location_service.dart';
 
 /// ─────────────────────────────────────────────────────────────────────────────
 /// AI Chat Service - Direct OpenAI Integration with Audio & Mood Support
@@ -50,6 +54,9 @@ class AIChatService {
   final TTSVoice _voice;
   
   final AudioPlayer _audioPlayer = AudioPlayer();
+  
+  /// Stream that emits when audio playback completes
+  Stream<void> get onAudioComplete => _audioPlayer.onPlayerComplete;
 
   // ─── Default Prompt ─────────────────────────────────────────────────────────
   static const String defaultPrompt = '''
@@ -89,6 +96,7 @@ Example: "[EXCITED] Oh, you have to try that place!"
   // ─── Send Message ───────────────────────────────────────────────────────────
   /// Sends a user [message] with optional conversation [history].
   /// Include [locationContext] to give AI info about user's location and nearby places.
+  /// Include [nearbyPlaces] to provide real restaurant data from Google Places API.
   /// If [useAudio] is true, also generates and plays audio response.
   /// Returns AIChatResponse with text, optional restaurant data, and detected mood.
   Future<AIChatResponse> sendMessage({
@@ -96,56 +104,67 @@ Example: "[EXCITED] Oh, you have to try that place!"
     List<AIChatMessage> history = const [],
     bool useAudio = false,
     String? locationContext,
+    List<NearbyPlace>? nearbyPlaces,
   }) async {
     String basePrompt = useAudio ? audioPrompt : _basePrompt;
     
     // Add location context to system prompt if available
     if (locationContext != null && locationContext.isNotEmpty) {
-      basePrompt = '$basePrompt\n\nLOCATION INFO:\n$locationContext\n\nUse this location info to recommend specific nearby restaurants when asked about food places.';
+      basePrompt = '$basePrompt\n\nLOCATION INFO:\n$locationContext';
+    }
+    
+    // Add nearby places data if available
+    String nearbyPlacesContext = '';
+    if (nearbyPlaces != null && nearbyPlaces.isNotEmpty) {
+      final placesBuffer = StringBuffer('\n\nNEARBY RESTAURANTS (from Google Maps - USE THESE EXACT NAMES):\n');
+      for (final place in nearbyPlaces) {
+        placesBuffer.writeln('- ${place.name}');
+        placesBuffer.writeln('  Address: ${place.address}');
+        if (place.rating != null) placesBuffer.writeln('  Rating: ${place.rating}/5 (${place.userRatingsTotal ?? 0} reviews)');
+        if (place.priceLevel != null) placesBuffer.writeln('  Price: ${"\$" * place.priceLevel!}');
+        if (place.isOpen != null) placesBuffer.writeln('  ${place.isOpen! ? "Open now" : "Currently closed"}');
+        if (place.types.isNotEmpty) placesBuffer.writeln('  Type: ${place.types.take(3).join(", ")}');
+        if (place.placeId != null) placesBuffer.writeln('  PlaceID: ${place.placeId}');
+        placesBuffer.writeln();
+      }
+      nearbyPlacesContext = placesBuffer.toString();
     }
     
     final enhancedPrompt = '''
 $basePrompt
+$nearbyPlacesContext
 
-CRITICAL: When recommending restaurants, you MUST follow this EXACT format:
+CRITICAL RULE: When recommending a restaurant, you MUST ONLY recommend restaurants from the NEARBY RESTAURANTS list above.
+DO NOT make up restaurant names. If no nearby restaurants are provided, ask the user what type of food they're in the mood for.
+
+When recommending restaurants, follow this EXACT format:
 1. Write your conversational response (WITHOUT mentioning the restaurant JSON structure)
 2. Add a blank line
 3. Add the marker: RESTAURANT_DATA:
 4. Add the JSON object (properly formatted, one per response)
 
-The JSON MUST use this structure:
+The JSON MUST use this structure (use EXACT name and address from the nearby list):
 {
-  "name": "Restaurant Name",
+  "name": "Exact Restaurant Name from list",
   "description": "Brief compelling description",
   "imageUrl": "https://images.unsplash.com/photo-XXXXX?w=800",
-  "address": "Full address or area",
+  "address": "Exact address from list",
   "rating": 4.5,
   "priceLevel": "\$\$",
-  "cuisineType": "Type of cuisine"
+  "cuisineType": "Type of cuisine",
+  "placeId": "PlaceID from list if available"
 }
 
 IMPORTANT RULES:
+- ONLY recommend restaurants from the NEARBY RESTAURANTS list
+- Use the EXACT name as shown in the list
 - Only add ONE restaurant per response
 - The RESTAURANT_DATA: marker MUST be on its own line
 - The JSON must be valid (proper quotes, commas, braces)
 - Do NOT show the JSON structure to the user in your conversational text
-- Use actual Unsplash image URLs
+- Use relevant Unsplash image URLs for the cuisine type
 
-Example response:
-"[EXCITED] Both spots are perfect for a cozy meal! Let me tell you about a great Asian fusion place nearby.
-
-RESTAURANT_DATA:
-{
-  "name": "Noodle & Company",
-  "description": "A casual spot for delicious Asian-inspired dishes like pad thai and ramen. Perfect for a cozy meal!",
-  "imageUrl": "https://images.unsplash.com/photo-1617093727343-374698b1b08d?w=800",
-  "address": "Baton Rouge, LA",
-  "rating": 4.5,
-  "priceLevel": "\$\$",
-  "cuisineType": "Asian"
-}"
-
-Note: For imageUrl, use relevant Unsplash URLs like:
+Unsplash image URL reference:
 - Burgers: https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800
 - Pizza: https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800
 - Sushi: https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=800
@@ -153,6 +172,7 @@ Note: For imageUrl, use relevant Unsplash URLs like:
 - Mexican: https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=800
 - Asian: https://images.unsplash.com/photo-1617093727343-374698b1b08d?w=800
 - Fine Dining: https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800
+- General Restaurant: https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800
 ''';
 
     final messages = <Map<String, String>>[
@@ -324,10 +344,19 @@ Note: For imageUrl, use relevant Unsplash URLs like:
         return;
       }
 
-      // Use in-memory bytes so web (Chrome) and mobile share the same playback path
-      final audioSource = BytesSource(response.bodyBytes);
       await _audioPlayer.stop(); // clear any existing playback before starting
-      await _audioPlayer.play(audioSource);
+      
+      // Write to temp file for iOS compatibility (BytesSource doesn't work reliably on iOS)
+      final tempDir = await getTemporaryDirectory();
+      final tempFile = File('${tempDir.path}/tts_audio_${DateTime.now().millisecondsSinceEpoch}.mp3');
+      await tempFile.writeAsBytes(response.bodyBytes);
+      
+      await _audioPlayer.play(DeviceFileSource(tempFile.path));
+      
+      // Clean up temp file after playback completes
+      _audioPlayer.onPlayerComplete.first.then((_) {
+        tempFile.delete().ignore();
+      });
     } catch (e) {
       print('TTS Error: $e');
     }

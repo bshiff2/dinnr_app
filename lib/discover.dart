@@ -817,29 +817,37 @@ class _DiscoverCard extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          place.name,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontFamily: 'Arvo',
-                            fontWeight: FontWeight.w700,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            place.name,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontFamily: 'Arvo',
+                              fontWeight: FontWeight.w700,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _cuisineLabel(),
-                          style: const TextStyle(
-                            color: Color(0xFFE0E0E0),
-                            fontSize: 13,
-                            fontFamily: 'SF Compact Rounded',
+                          const SizedBox(height: 4),
+                          Text(
+                            _cuisineLabel(),
+                            style: const TextStyle(
+                              color: Color(0xFFE0E0E0),
+                              fontSize: 13,
+                              fontFamily: 'SF Compact Rounded',
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
+                    const SizedBox(width: 8),
                     Row(
                       children: [
                         Container(
