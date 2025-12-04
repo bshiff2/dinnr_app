@@ -205,6 +205,7 @@ class _VoiceModePageState extends State<VoiceModePage>
   Future<void> _initSpeech() async {
     _speechAvailable = await _speech.initialize(
       onStatus: (status) {
+        debugPrint('Speech status: $status');
         if (status == 'done' || status == 'notListening') {
           if (_isListening && mounted) {
             setState(() {
@@ -224,6 +225,7 @@ class _VoiceModePageState extends State<VoiceModePage>
         }
       },
       onError: (error) {
+        debugPrint('Speech error: ${error.errorMsg}, permanent: ${error.permanent}');
         if (mounted) {
           setState(() {
             _isListening = false;
@@ -232,7 +234,16 @@ class _VoiceModePageState extends State<VoiceModePage>
         }
         _soundLevelTimer?.cancel();
       },
+      debugLogging: true, // Enable debug logging
     );
+    
+    // Log available locales for debugging
+    if (_speechAvailable) {
+      final locales = await _speech.locales();
+      debugPrint('Available locales: ${locales.map((l) => l.localeId).join(', ')}');
+      debugPrint('System locale: ${_speech.systemLocale}');
+    }
+    
     if (mounted) setState(() {});
   }
 
@@ -370,20 +381,32 @@ class _VoiceModePageState extends State<VoiceModePage>
           setState(() {
             _recognizedText = result.recognizedWords;
           });
+          // Debug: print confidence and alternatives
+          debugPrint('Speech result: ${result.recognizedWords}');
+          debugPrint('Confidence: ${result.confidence}');
+          debugPrint('Final: ${result.finalResult}');
         }
       },
       onSoundLevelChange: (level) {
         if (mounted) {
+          // iOS returns values typically between -2 to 10 dB
+          // Normalize to 0.0 - 1.0 range with better sensitivity
+          final normalizedLevel = ((level + 3) / 15).clamp(0.0, 1.0);
           setState(() {
-            _soundLevel = ((level + 2) / 12).clamp(0.0, 1.0);
+            _soundLevel = normalizedLevel;
           });
+          // Debug: print actual sound levels
+          if (level > 0) {
+            debugPrint('Sound level: $level (normalized: $normalizedLevel)');
+          }
         }
       },
-      listenFor: const Duration(seconds: 15), // Reduced from 30s
-      pauseFor: const Duration(seconds: 2), // Reduced from 3s - stops faster when you stop talking
-      cancelOnError: true,
+      listenFor: const Duration(seconds: 30), // Longer listening window
+      pauseFor: const Duration(milliseconds: 1500), // 1.5 seconds after you stop talking
+      cancelOnError: false, // Don't cancel on minor errors
       partialResults: true, // Show partial results while speaking
       listenMode: stt.ListenMode.dictation, // Better for continuous speech
+      localeId: 'en_US', // Explicitly set locale for better recognition
     );
   }
 
