@@ -8,6 +8,7 @@ import 'home_page.dart';
 import 'login.dart';
 import 'services/config_service.dart';
 import 'services/favorite_service.dart';
+import 'services/settings_service.dart';
 import 'services/user_service.dart';
 
 // Temporary main() for standalone testing - remove when integrating with main.dart
@@ -47,6 +48,7 @@ class _ProfileState extends State<Profile> {
   final _userService = UserService();
   final _favoriteService = FavoriteService();
   final _configService = ConfigService();
+  final _settingsService = SettingsService();
   StreamSubscription<User?>? _authSub;
   StreamSubscription<List<FavoriteRestaurant>>? _favoritesSub;
   List<FavoriteRestaurant> _favorites = [];
@@ -57,6 +59,7 @@ class _ProfileState extends State<Profile> {
   bool _notifyPush = true;
   bool _notifyEmail = false;
   bool _preferVeganFirst = false;
+  bool _showVoiceSubtitles = true;
   double _maxDistanceMiles = 5.0;
   Map<String, dynamic>? _userProfile;
 
@@ -95,6 +98,20 @@ class _ProfileState extends State<Profile> {
   void initState() {
     super.initState();
     _startAuthListener();
+    _loadSettings();
+  }
+  
+  Future<void> _loadSettings() async {
+    await _settingsService.init();
+    if (mounted) {
+      setState(() {
+        _showVoiceSubtitles = _settingsService.showSubtitles;
+        _notifyPush = _settingsService.pushNotifications;
+        _notifyEmail = _settingsService.emailUpdates;
+        _preferVeganFirst = _settingsService.preferVeganFirst;
+        _maxDistanceMiles = _settingsService.maxDistanceMiles;
+      });
+    }
   }
 
   @override
@@ -961,24 +978,43 @@ class _ProfileState extends State<Profile> {
             Column(
               children: [
                 _settingsSwitch(
+                  title: 'Voice mode subtitles',
+                  subtitle: 'Show text transcripts while AI is speaking.',
+                  value: _showVoiceSubtitles,
+                  onChanged: (val) {
+                    setState(() => _showVoiceSubtitles = val);
+                    _settingsService.setShowSubtitles(val);
+                  },
+                ),
+                const SizedBox(height: 8),
+                _settingsSwitch(
                   title: 'Push notifications',
                   subtitle: 'Get alerts for new recommendations and status updates.',
                   value: _notifyPush,
-                  onChanged: (val) => setState(() => _notifyPush = val),
+                  onChanged: (val) {
+                    setState(() => _notifyPush = val);
+                    _settingsService.setPushNotifications(val);
+                  },
                 ),
                 const SizedBox(height: 8),
                 _settingsSwitch(
                   title: 'Email updates',
                   subtitle: 'Occasional roundups and tips sent to your inbox.',
                   value: _notifyEmail,
-                  onChanged: (val) => setState(() => _notifyEmail = val),
+                  onChanged: (val) {
+                    setState(() => _notifyEmail = val);
+                    _settingsService.setEmailUpdates(val);
+                  },
                 ),
                 const SizedBox(height: 8),
                 _settingsSwitch(
                   title: 'Vegan-friendly first',
                   subtitle: 'Prioritize vegan options when available in Discover.',
                   value: _preferVeganFirst,
-                  onChanged: (val) => setState(() => _preferVeganFirst = val),
+                  onChanged: (val) {
+                    setState(() => _preferVeganFirst = val);
+                    _settingsService.setPreferVeganFirst(val);
+                  },
                 ),
                 const SizedBox(height: 12),
                 _settingsSlider(
@@ -987,7 +1023,10 @@ class _ProfileState extends State<Profile> {
                   value: _maxDistanceMiles,
                   min: 0.5,
                   max: 20,
-                  onChanged: (val) => setState(() => _maxDistanceMiles = double.parse(val.toStringAsFixed(1))),
+                  onChanged: (val) {
+                    setState(() => _maxDistanceMiles = double.parse(val.toStringAsFixed(1)));
+                    _settingsService.setMaxDistanceMiles(val);
+                  },
                 ),
               ],
             ),

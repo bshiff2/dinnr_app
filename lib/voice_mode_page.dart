@@ -6,6 +6,7 @@ import 'discover.dart';
 import 'services/openai_realtime_service.dart';
 import 'services/config_service.dart';
 import 'services/location_service.dart';
+import 'services/settings_service.dart';
 
 /// Personality types for the AI girlfriend
 enum AIPersonality {
@@ -103,6 +104,7 @@ class _VoiceModePageState extends State<VoiceModePage>
     with TickerProviderStateMixin {
   OpenAIRealtimeService? _realtimeService;
   late LocationService _locationService;
+  final _settingsService = SettingsService();
   
   // Personality selection
   AIPersonality? _selectedPersonality;
@@ -112,6 +114,7 @@ class _VoiceModePageState extends State<VoiceModePage>
   bool _isProcessing = false;
   bool _isPlayingAudio = false;
   bool _isConnected = false;
+  bool _showSubtitles = true;
   String _recognizedText = '';
   String _aiResponseText = '';
   String _statusText = 'Tap to speak';
@@ -142,6 +145,16 @@ class _VoiceModePageState extends State<VoiceModePage>
     
     _initAnimations();
     _initLocation();
+    _loadSettings();
+  }
+  
+  Future<void> _loadSettings() async {
+    await _settingsService.init();
+    if (mounted) {
+      setState(() {
+        _showSubtitles = _settingsService.showSubtitles;
+      });
+    }
   }
   
   void _selectPersonality(AIPersonality personality) {
@@ -364,16 +377,15 @@ ${_locationContext != null ? '\nUser location context: $_locationContext' : ''}'
     debugPrint('Extracting restaurant from: $text');
     
     // Common patterns for restaurant recommendations
-    // Look for restaurant names mentioned with common keywords nearby
     final patterns = [
-      // Names ending with "Café", "Coffee", "Restaurant", etc.
-      RegExp(r"\b([A-Z][a-zA-Z']+(?:\s+[A-Z][a-zA-Z']+)*\s*(?:Café|Cafe|Coffee|Restaurant|Kitchen|Grill|Bistro|Diner|Bar|House|Truck|Bakery))\b", caseSensitive: false),
+      // "check out [Name]" or "try [Name]" - capture what comes AFTER the verb
+      RegExp(r"(?:check out|try|visit|go to|recommend)\s+([A-Z][a-zA-Z']+(?:\s+[A-Z][a-zA-Z']+){0,3})(?:\s*[,.]|\s+(?:for|where|and|or|if|they|it|—|-)|\s*$)", caseSensitive: false),
+      // Names ending with "Café", "Coffee", "Restaurant", "Pizza", etc.
+      RegExp(r"\b([A-Z][a-zA-Z']+(?:\s+[A-Z][a-zA-Z']+)*\s*(?:Café|Cafe|Coffee|Restaurant|Kitchen|Grill|Bistro|Diner|Bar|House|Truck|Bakery|Pizza|Pizzeria))\b", caseSensitive: false),
       // "CC's" or "Name's" style names with optional suffix
       RegExp(r"\b([A-Z]+[a-z]*'s(?:\s+[A-Z][a-zA-Z]+)*(?:\s+(?:Coffee|House|Kitchen|Place|Cafe|Bar))?)\b", caseSensitive: false),
-      // Magpie Cafe, French Truck, etc. (two+ capitalized words)
-      RegExp(r"\b((?:Magpie|French|Highland|Brew|Coffee|City)\s+[A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)?)\b", caseSensitive: false),
-      // "check out [Name]" or "try [Name]" - stop at punctuation or common words
-      RegExp(r"(?:check out|try|visit|go to|recommend)\s+([A-Z][a-zA-Z']+(?:\s+[A-Z][a-zA-Z']+){0,3})(?:\s*[,.]|\s+(?:for|where|and|or|if|they|it|—|-)|\s*$)", caseSensitive: false),
+      // Known local patterns: Magpie Cafe, French Truck, etc.
+      RegExp(r"\b((?:Magpie|French\s+Truck|Highland|Brew\s+Ha-Ha|Light\s*House|Red\s+Zeppelin)\s*(?:[A-Z][a-zA-Z]+)?)\b", caseSensitive: false),
     ];
     
     String? foundRestaurant;
@@ -392,10 +404,13 @@ ${_locationContext != null ? '\nUser location context: $_locationContext' : ''}'
           debugPrint('Pattern $i found candidate: "$candidate"');
           // Make sure it's a reasonable restaurant name (3-40 chars, not common words)
           final lowerCandidate = candidate.toLowerCase();
-          final excludeWords = ['the', 'a', 'an', 'for', 'and', 'or', 'is', 'are', 'ready', 'let', 'sounds', 'like', 'great', 'perfect'];
+          final excludeWords = ['the', 'a', 'an', 'for', 'and', 'or', 'is', 'are', 'ready', 'let', 'sounds', 'like', 'great', 'perfect', 'try', 'check', 'visit', 'go'];
           if (candidate.length >= 3 && 
               candidate.length <= 40 &&
               !excludeWords.contains(lowerCandidate) &&
+              !lowerCandidate.startsWith('try ') &&
+              !lowerCandidate.startsWith('check ') &&
+              !lowerCandidate.startsWith('visit ') &&
               !lowerCandidate.startsWith('ready ') &&
               !lowerCandidate.startsWith('let ')) {
             foundRestaurant = candidate;
@@ -684,29 +699,30 @@ ${_locationContext != null ? '\nUser location context: $_locationContext' : ''}'
 
                   const SizedBox(height: 24),
 
-                  // Recognized text or AI response
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32),
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 300),
-                      child: Text(
-                        _isPlayingAudio || _aiResponseText.isNotEmpty 
-                            ? _aiResponseText 
-                            : _recognizedText,
-                        key: ValueKey(_isPlayingAudio ? 'ai' : 'user'),
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: _isPlayingAudio ? Colors.white70 : Colors.white,
-                          fontSize: _isPlayingAudio ? 18 : 20,
-                          fontWeight: FontWeight.w400,
-                          fontStyle: _isPlayingAudio ? FontStyle.italic : FontStyle.normal,
-                          height: 1.4,
+                  // Recognized text or AI response (only if subtitles enabled)
+                  if (_showSubtitles)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32),
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 300),
+                        child: Text(
+                          _isPlayingAudio || _aiResponseText.isNotEmpty 
+                              ? _aiResponseText 
+                              : _recognizedText,
+                          key: ValueKey(_isPlayingAudio ? 'ai' : 'user'),
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: _isPlayingAudio ? Colors.white70 : Colors.white,
+                            fontSize: _isPlayingAudio ? 18 : 20,
+                            fontWeight: FontWeight.w400,
+                            fontStyle: _isPlayingAudio ? FontStyle.normal : FontStyle.normal,
+                            height: 1.4,
+                          ),
+                          maxLines: 5,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 5,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                  ),
 
                   const Spacer(flex: 3),
 
