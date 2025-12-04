@@ -1,10 +1,9 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 import 'discover.dart';
-import 'services/ai_chat_service.dart';
+import 'services/openai_realtime_service.dart';
 import 'services/config_service.dart';
 import 'services/location_service.dart';
 
@@ -80,15 +79,15 @@ Keep responses short and upbeat for voice. Be warm and adorable.''';
     }
   }
 
-  /// Each personality has a distinct TTS voice
-  TTSVoice get voice {
+  /// Each personality has a distinct voice for Realtime API
+  String get voiceName {
     switch (this) {
       case AIPersonality.witty:
-        return TTSVoice.alloy;   // More neutral/sophisticated tone
+        return 'alloy';   // More neutral/sophisticated tone
       case AIPersonality.spicy:
-        return TTSVoice.shimmer; // More expressive/sultry
+        return 'shimmer'; // More expressive/sultry
       case AIPersonality.bubbly:
-        return TTSVoice.nova;    // Warm and friendly
+        return 'nova';    // Warm and friendly
     }
   }
 }
@@ -102,8 +101,7 @@ class VoiceModePage extends StatefulWidget {
 
 class _VoiceModePageState extends State<VoiceModePage>
     with TickerProviderStateMixin {
-  late stt.SpeechToText _speech;
-  AIChatService? _aiService;
+  OpenAIRealtimeService? _realtimeService;
   late LocationService _locationService;
   
   // Personality selection
@@ -113,7 +111,7 @@ class _VoiceModePageState extends State<VoiceModePage>
   bool _isListening = false;
   bool _isProcessing = false;
   bool _isPlayingAudio = false;
-  bool _speechAvailable = false;
+  bool _isConnected = false;
   String _recognizedText = '';
   String _aiResponseText = '';
   String _statusText = 'Tap to speak';
@@ -121,9 +119,6 @@ class _VoiceModePageState extends State<VoiceModePage>
   
   // Restaurant recommendation
   String? _pendingRestaurantName;
-  
-  // Conversation history for context
-  final List<AIChatMessage> _conversationHistory = [];
 
   // Animation controllers
   late AnimationController _pulseController;
@@ -134,12 +129,10 @@ class _VoiceModePageState extends State<VoiceModePage>
 
   // Sound level for reactive animation
   double _soundLevel = 0.0;
-  Timer? _soundLevelTimer;
 
   @override
   void initState() {
     super.initState();
-    _speech = stt.SpeechToText();
     
     _locationService = LocationService();
     final config = ConfigService();
@@ -154,20 +147,115 @@ class _VoiceModePageState extends State<VoiceModePage>
   void _selectPersonality(AIPersonality personality) {
     final config = ConfigService();
     
-    // Create AI service with personality-specific prompt and voice
-    _aiService = AIChatService(
+    // Build instructions with personality and location context
+    String instructions = '''${personality.voicePrompt}
+
+You are also Dinnr, a foodie assistant that helps find restaurants. 
+When asked about food or restaurants, give helpful recommendations.
+Keep responses concise and conversational for voice.
+${_locationContext != null ? '\nUser location context: $_locationContext' : ''}''';
+    
+    // Create Realtime API service with personality-specific voice
+    _realtimeService = OpenAIRealtimeService(
       apiKey: config.openAIKey,
-      basePrompt: personality.voicePrompt,
-      model: config.aiModel,
-      voice: personality.voice,
+      voice: personality.voiceName,
+      instructions: instructions,
     );
+    
+    // Set up callbacks
+    _realtimeService!.onTranscript = (text) {
+      if (mounted) {
+        setState(() {
+          _recognizedText = text;
+        });
+      }
+    };
+    
+    _realtimeService!.onResponse = (text) {
+      if (mounted) {
+        setState(() {
+          _aiResponseText += text;
+        });
+      }
+    };
+    
+    _realtimeService!.onFullResponse = (fullText) {
+      if (mounted) {
+        // Extract restaurant name from the full response
+        _extractRestaurantName(fullText);
+      }
+    };
+    
+    _realtimeService!.onAudioStart = () {
+      if (mounted) {
+        setState(() {
+          _isPlayingAudio = true;
+          _isProcessing = false;
+          _statusText = 'Speaking...';
+        });
+      }
+    };
+    
+    _realtimeService!.onResponseStart = () {
+      if (mounted) {
+        setState(() {
+          _isListening = false;
+          _isProcessing = true;
+          _statusText = 'Processing...';
+        });
+      }
+    };
+    
+    _realtimeService!.onAudioEnd = () {
+      if (mounted) {
+        setState(() {
+          _isPlayingAudio = false;
+          _isProcessing = false;
+          _statusText = 'Tap to speak';
+        });
+      }
+    };
+    
+    _realtimeService!.onInputLevel = (level) {
+      if (mounted && _isListening) {
+        setState(() {
+          _soundLevel = level;
+        });
+      }
+    };
+    
+    _realtimeService!.onError = (error) {
+      if (mounted) {
+        setState(() {
+          _isListening = false;
+          _isProcessing = false;
+          _statusText = 'Error: $error';
+        });
+      }
+    };
     
     setState(() {
       _selectedPersonality = personality;
       _hasSelectedPersonality = true;
     });
     
-    _initSpeech();
+    // Connect to the Realtime API
+    _connectToRealtime();
+  }
+  
+  Future<void> _connectToRealtime() async {
+    setState(() {
+      _statusText = 'Connecting...';
+    });
+    
+    await _realtimeService?.connect();
+    
+    if (mounted) {
+      setState(() {
+        _isConnected = _realtimeService?.isConnected ?? false;
+        _statusText = _isConnected ? 'Tap to speak' : 'Connection failed';
+      });
+    }
   }
 
   void _initLocation() async {
@@ -202,158 +290,14 @@ class _VoiceModePageState extends State<VoiceModePage>
     )..repeat();
   }
 
-  Future<void> _initSpeech() async {
-    _speechAvailable = await _speech.initialize(
-      onStatus: (status) {
-        debugPrint('Speech status: $status');
-        if (status == 'done' || status == 'notListening') {
-          if (_isListening && mounted) {
-            setState(() {
-              _isListening = false;
-            });
-            _soundLevelTimer?.cancel();
-            
-            // Send message to AI if we have recognized text
-            if (_recognizedText.isNotEmpty) {
-              _sendToAI(_recognizedText);
-            } else {
-              setState(() {
-                _statusText = 'Tap to speak';
-              });
-            }
-          }
-        }
-      },
-      onError: (error) {
-        debugPrint('Speech error: ${error.errorMsg}, permanent: ${error.permanent}');
-        if (mounted) {
-          setState(() {
-            _isListening = false;
-            _statusText = 'Error: ${error.errorMsg}';
-          });
-        }
-        _soundLevelTimer?.cancel();
-      },
-      debugLogging: true, // Enable debug logging
-    );
-    
-    // Log available locales for debugging
-    if (_speechAvailable) {
-      final locales = await _speech.locales();
-      debugPrint('Available locales: ${locales.map((l) => l.localeId).join(', ')}');
-      debugPrint('System locale: ${_speech.systemLocale}');
-    }
-    
-    if (mounted) setState(() {});
-  }
-
-  Future<void> _sendToAI(String message) async {
-    if (!mounted || _isProcessing) return; // Prevent duplicate calls
-    
-    setState(() {
-      _isProcessing = true;
-      _statusText = 'Finding nearby places...';
-      _aiResponseText = '';
-    });
-
-    // Add user message to history
-    _conversationHistory.add(AIChatMessage(role: 'user', content: message));
-
-    try {
-      // Fetch nearby restaurants from Google Places API
-      // Extract cuisine keyword from message if possible
-      final lowerMessage = message.toLowerCase();
-      String? cuisineKeyword;
-      if (lowerMessage.contains('pizza')) cuisineKeyword = 'pizza';
-      else if (lowerMessage.contains('burger')) cuisineKeyword = 'burger';
-      else if (lowerMessage.contains('sushi') || lowerMessage.contains('japanese')) cuisineKeyword = 'sushi';
-      else if (lowerMessage.contains('mexican') || lowerMessage.contains('taco')) cuisineKeyword = 'mexican';
-      else if (lowerMessage.contains('chinese')) cuisineKeyword = 'chinese';
-      else if (lowerMessage.contains('italian') || lowerMessage.contains('pasta')) cuisineKeyword = 'italian';
-      else if (lowerMessage.contains('thai')) cuisineKeyword = 'thai';
-      else if (lowerMessage.contains('indian')) cuisineKeyword = 'indian';
-      else if (lowerMessage.contains('bbq') || lowerMessage.contains('barbecue')) cuisineKeyword = 'bbq';
-      
-      final nearbyPlaces = await _locationService.searchNearbyRestaurants(
-        keyword: cuisineKeyword,
-        radius: 5000, // 5km radius
-      );
-      
-      if (mounted) {
-        setState(() {
-          _statusText = 'Thinking...';
-        });
-      }
-      
-      final response = await _aiService!.sendMessage(
-        message: message,
-        history: _conversationHistory,
-        useAudio: true,
-        locationContext: _locationContext,
-        nearbyPlaces: nearbyPlaces,
-      );
-
-      if (!mounted) return;
-
-      // Add AI response to history
-      _conversationHistory.add(AIChatMessage(role: 'assistant', content: response.text));
-      
-      // Capture restaurant data if present
-      final hasRestaurant = response.restaurantData != null;
-      final restaurantName = hasRestaurant ? response.restaurantData!['name'] as String? : null;
-
-      setState(() {
-        _isProcessing = false;
-        _isPlayingAudio = true;
-        _aiResponseText = response.text;
-        _statusText = 'Speaking...';
-      });
-
-      // Wait for audio to actually finish playing
-      try {
-        await _aiService!.onAudioComplete.first.timeout(
-          const Duration(seconds: 60),
-        );
-      } catch (e) {
-        // Timeout or other error - continue anyway
-      }
-
-      if (!mounted) return;
-
-      // If AI recommended a restaurant, store it and show confirmation button
-      if (hasRestaurant && restaurantName != null) {
-        setState(() {
-          _isPlayingAudio = false;
-          _pendingRestaurantName = restaurantName;
-          _statusText = 'Tap to speak or view recommendation';
-        });
-        return;
-      }
-
-      setState(() {
-        _isPlayingAudio = false;
-        _statusText = 'Tap to speak';
-        _recognizedText = '';
-      });
-
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _isProcessing = false;
-        _isPlayingAudio = false;
-        _statusText = 'Error: $e';
-      });
-    }
-  }
-
   void _startListening() async {
     if (_isProcessing || _isPlayingAudio) return;
     
-    if (!_speechAvailable) {
-      await _initSpeech();
-      if (!_speechAvailable) {
+    if (!_isConnected) {
+      await _connectToRealtime();
+      if (!_isConnected) {
         setState(() {
-          _statusText = 'Microphone not available';
+          _statusText = 'Not connected. Tap to retry.';
         });
         return;
       }
@@ -366,74 +310,40 @@ class _VoiceModePageState extends State<VoiceModePage>
       _statusText = 'Listening...';
     });
 
-    // Simulate sound level changes for animation
-    _soundLevelTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
-      if (_isListening && mounted) {
-        setState(() {
-          _soundLevel = 0.3 + Random().nextDouble() * 0.7;
-        });
-      }
-    });
-
-    await _speech.listen(
-      onResult: (result) {
-        if (mounted) {
-          setState(() {
-            _recognizedText = result.recognizedWords;
-          });
-          // Debug: print confidence and alternatives
-          debugPrint('Speech result: ${result.recognizedWords}');
-          debugPrint('Confidence: ${result.confidence}');
-          debugPrint('Final: ${result.finalResult}');
-        }
-      },
-      onSoundLevelChange: (level) {
-        if (mounted) {
-          // iOS returns values typically between -2 to 10 dB
-          // Normalize to 0.0 - 1.0 range with better sensitivity
-          final normalizedLevel = ((level + 3) / 15).clamp(0.0, 1.0);
-          setState(() {
-            _soundLevel = normalizedLevel;
-          });
-          // Debug: print actual sound levels
-          if (level > 0) {
-            debugPrint('Sound level: $level (normalized: $normalizedLevel)');
-          }
-        }
-      },
-      listenFor: const Duration(seconds: 30), // Longer listening window
-      pauseFor: const Duration(milliseconds: 1500), // 1.5 seconds after you stop talking
-      cancelOnError: false, // Don't cancel on minor errors
-      partialResults: true, // Show partial results while speaking
-      listenMode: stt.ListenMode.dictation, // Better for continuous speech
-      localeId: 'en_US', // Explicitly set locale for better recognition
-    );
+    await _realtimeService?.startRecording();
   }
 
   void _stopListening() async {
-    await _speech.stop();
-    _soundLevelTimer?.cancel();
-    // Note: Don't call _sendToAI here - the onStatus callback in _initSpeech
-    // will handle sending when speech recognition completes with 'done' status.
-    // This prevents duplicate API calls.
-  }
+    if (!_isListening) return;
+    
+    setState(() {
+      _isListening = false;
+      _isProcessing = true;
+      _statusText = 'Processing...';
+    });
 
-  void _stopAudio() async {
-    await _aiService?.stopAudio();
-    if (mounted) {
-      setState(() {
-        _isPlayingAudio = false;
-        _statusText = 'Tap to speak';
-      });
-    }
+    await _realtimeService?.stopRecording();
   }
 
   void _onBubbleTap() {
     if (_isListening) {
       _stopListening();
-    } else if (_isPlayingAudio) {
-      _stopAudio();
-    } else if (!_isProcessing) {
+    } else if (_isPlayingAudio || _isProcessing) {
+      // Allow interrupting the AI - stop audio and start listening
+      _stopAudioAndListen();
+    } else {
+      _startListening();
+    }
+  }
+  
+  void _stopAudioAndListen() async {
+    await _realtimeService?.stopAudio();
+    if (mounted) {
+      setState(() {
+        _isPlayingAudio = false;
+        _isProcessing = false;
+      });
+      // Immediately start listening after interrupting
       _startListening();
     }
   }
@@ -449,15 +359,69 @@ class _VoiceModePageState extends State<VoiceModePage>
       ),
     );
   }
+  
+  void _extractRestaurantName(String text) {
+    debugPrint('Extracting restaurant from: $text');
+    
+    // Common patterns for restaurant recommendations
+    // Look for restaurant names mentioned with common keywords nearby
+    final patterns = [
+      // Names ending with "Café", "Coffee", "Restaurant", etc.
+      RegExp(r"\b([A-Z][a-zA-Z']+(?:\s+[A-Z][a-zA-Z']+)*\s*(?:Café|Cafe|Coffee|Restaurant|Kitchen|Grill|Bistro|Diner|Bar|House|Truck|Bakery))\b", caseSensitive: false),
+      // "CC's" or "Name's" style names with optional suffix
+      RegExp(r"\b([A-Z]+[a-z]*'s(?:\s+[A-Z][a-zA-Z]+)*(?:\s+(?:Coffee|House|Kitchen|Place|Cafe|Bar))?)\b", caseSensitive: false),
+      // Magpie Cafe, French Truck, etc. (two+ capitalized words)
+      RegExp(r"\b((?:Magpie|French|Highland|Brew|Coffee|City)\s+[A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)?)\b", caseSensitive: false),
+      // "check out [Name]" or "try [Name]" - stop at punctuation or common words
+      RegExp(r"(?:check out|try|visit|go to|recommend)\s+([A-Z][a-zA-Z']+(?:\s+[A-Z][a-zA-Z']+){0,3})(?:\s*[,.]|\s+(?:for|where|and|or|if|they|it|—|-)|\s*$)", caseSensitive: false),
+    ];
+    
+    String? foundRestaurant;
+    
+    for (int i = 0; i < patterns.length; i++) {
+      final pattern = patterns[i];
+      final matches = pattern.allMatches(text);
+      for (final match in matches) {
+        if (match.group(1) != null) {
+          String candidate = match.group(1)!.trim();
+          // Clean up the name
+          candidate = candidate
+              .replaceAll(RegExp(r'\s+'), ' ')
+              .replaceAll(RegExp(r'[,.\-—]+$'), '')
+              .trim();
+          debugPrint('Pattern $i found candidate: "$candidate"');
+          // Make sure it's a reasonable restaurant name (3-40 chars, not common words)
+          final lowerCandidate = candidate.toLowerCase();
+          final excludeWords = ['the', 'a', 'an', 'for', 'and', 'or', 'is', 'are', 'ready', 'let', 'sounds', 'like', 'great', 'perfect'];
+          if (candidate.length >= 3 && 
+              candidate.length <= 40 &&
+              !excludeWords.contains(lowerCandidate) &&
+              !lowerCandidate.startsWith('ready ') &&
+              !lowerCandidate.startsWith('let ')) {
+            foundRestaurant = candidate;
+            break;
+          }
+        }
+      }
+      if (foundRestaurant != null) break;
+    }
+    
+    if (foundRestaurant != null) {
+      setState(() {
+        _pendingRestaurantName = foundRestaurant;
+      });
+      debugPrint('✓ Extracted restaurant: $foundRestaurant');
+    } else {
+      debugPrint('✗ No restaurant found in response');
+    }
+  }
 
   @override
   void dispose() {
     _pulseController.dispose();
     _waveController.dispose();
     _morphController.dispose();
-    _soundLevelTimer?.cancel();
-    _speech.cancel();
-    _aiService?.dispose();
+    _realtimeService?.dispose();
     super.dispose();
   }
 

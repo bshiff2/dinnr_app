@@ -190,13 +190,21 @@ class _DiscoverPageState extends State<DiscoverPage> {
       return;
     }
     _locationService.setApiKey(key);
-    final initialKeyword = _hasActiveSearch && _searchController.text.trim().isNotEmpty
-        ? _searchController.text.trim()
-        : _categories[_selectedCategory].keyword;
-    await _loadPlaces(keyword: initialKeyword);
+    
+    // If we have a preset search query (from voice mode), use text search
+    // Otherwise use nearby search with category keyword
+    if (_hasActiveSearch && _searchController.text.trim().isNotEmpty) {
+      await _loadPlaces(
+        keyword: _searchController.text.trim(),
+        isRestaurantName: true,
+      );
+    } else {
+      final initialKeyword = _categories[_selectedCategory].keyword;
+      await _loadPlaces(keyword: initialKeyword);
+    }
   }
 
-  Future<void> _loadPlaces({String? keyword}) async {
+  Future<void> _loadPlaces({String? keyword, bool isRestaurantName = false}) async {
     setState(() {
       _loading = true;
       _error = null;
@@ -214,7 +222,14 @@ class _DiscoverPageState extends State<DiscoverPage> {
       return;
     }
 
-    final results = await _locationService.searchNearbyRestaurants(keyword: keyword);
+    // Use text search for specific restaurant names (from voice mode)
+    // Use nearby search for categories
+    List<NearbyPlace> results;
+    if (isRestaurantName && keyword != null && keyword.isNotEmpty) {
+      results = await _locationService.searchRestaurantByName(keyword);
+    } else {
+      results = await _locationService.searchNearbyRestaurants(keyword: keyword);
+    }
     if (!mounted) return;
 
     final filtered = _filterPlaces(results);

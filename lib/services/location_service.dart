@@ -110,6 +110,68 @@ class LocationService {
     return null;
   }
 
+  /// Search for a specific restaurant by name using Text Search API
+  /// This is better for finding exact restaurant names
+  Future<List<NearbyPlace>> searchRestaurantByName(String name) async {
+    if (_googleApiKey == null || _googleApiKey!.isEmpty) {
+      print('Google API key not set');
+      return [];
+    }
+
+    final position = _lastPosition ?? await getCurrentPosition();
+    if (position == null) return [];
+
+    try {
+      // Use Text Search API for better name matching
+      final url = Uri.parse(
+        'https://maps.googleapis.com/maps/api/place/textsearch/json'
+        '?query=${Uri.encodeComponent('$name restaurant')}'
+        '&location=${position.latitude},${position.longitude}'
+        '&radius=5000'
+        '&type=restaurant'
+        '&key=$_googleApiKey',
+      );
+
+      print('Searching for restaurant: $name');
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final results = data['results'] as List;
+        print('Found ${results.length} results for "$name"');
+
+        return results.take(5).map((place) {
+          final photos = place['photos'] as List?;
+          final photoRefs = photos == null
+              ? <String>[]
+              : photos
+                  .map((p) => p['photo_reference'] as String?)
+                  .whereType<String>()
+                  .toList();
+
+          return NearbyPlace(
+            name: place['name'] ?? 'Unknown',
+            address: place['formatted_address'] ?? place['vicinity'] ?? '',
+            rating: (place['rating'] as num?)?.toDouble(),
+            priceLevel: place['price_level'] as int?,
+            isOpen: place['opening_hours']?['open_now'] as bool?,
+            types: List<String>.from(place['types'] ?? []),
+            photoReference: photoRefs.isNotEmpty ? photoRefs.first : null,
+            photoReferences: photoRefs,
+            userRatingsTotal: place['user_ratings_total'] as int?,
+            lat: (place['geometry']?['location']?['lat'] as num?)?.toDouble(),
+            lng: (place['geometry']?['location']?['lng'] as num?)?.toDouble(),
+            placeId: place['place_id'] as String?,
+          );
+        }).toList();
+      }
+    } catch (e) {
+      print('Text Search API error: $e');
+    }
+
+    return [];
+  }
+
   /// Search for nearby restaurants using Google Places API
   Future<List<NearbyPlace>> searchNearbyRestaurants({
     String? keyword,

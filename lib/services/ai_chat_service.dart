@@ -366,6 +366,47 @@ Unsplash image URL reference:
   Future<void> stopAudio() async => await _audioPlayer.stop();
   bool get isPlaying => _audioPlayer.state == PlayerState.playing;
   void dispose() => _audioPlayer.dispose();
+
+  // ─── Speech to Text (Whisper API) ───────────────────────────────────────────
+  /// Transcribes audio file using OpenAI Whisper API
+  /// [audioFilePath] should be path to an audio file (m4a, mp3, wav, etc.)
+  Future<String> transcribeAudio(String audioFilePath) async {
+    try {
+      final file = File(audioFilePath);
+      if (!await file.exists()) {
+        throw const AIChatException('Audio file not found');
+      }
+
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('https://api.openai.com/v1/audio/transcriptions'),
+      );
+
+      request.headers['Authorization'] = 'Bearer $_apiKey';
+      request.fields['model'] = 'whisper-1';
+      request.fields['language'] = 'en';
+      request.files.add(await http.MultipartFile.fromPath(
+        'file',
+        audioFilePath,
+      ));
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode != 200) {
+        final error = jsonDecode(response.body);
+        throw AIChatException(
+          error['error']?['message'] ?? 'Transcription failed: ${response.statusCode}',
+        );
+      }
+
+      final data = jsonDecode(response.body);
+      return data['text'] as String? ?? '';
+    } catch (e) {
+      if (e is AIChatException) rethrow;
+      throw AIChatException('Transcription error: $e');
+    }
+  }
 }
 
 // ─── Response Model ───────────────────────────────────────────────────────────
